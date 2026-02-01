@@ -11,14 +11,13 @@ public class SimulationManager2 : MonoBehaviour
     public Vector2 spawnArea = new Vector2(20, 10);
 
     [Header("UI Stats")]
-    public TMP_Text amebaCountText; // Arrastra aquí el TextoAmebas
-    public TMP_Text foodCountText;  // Arrastra aquí el TextoComida
+    public TMP_Text amebaCountText;
+    public TMP_Text foodCountText;
 
     private float timer = 0f;
 
     void Awake()
     {
-        // Antes de que empiece nada, borramos el pasado
         DeleteAllBrainFiles();
     }
 
@@ -27,26 +26,9 @@ public class SimulationManager2 : MonoBehaviour
         StartCoroutine(StartSimulation());
     }
 
-    // --- FUNCIÓN DE LIMPIEZA ---
-    void DeleteAllBrainFiles()
-    {
-        string path = Application.persistentDataPath;
-        DirectoryInfo dir = new DirectoryInfo(path);
-        
-        // Buscamos solo los archivos .json
-        FileInfo[] files = dir.GetFiles("*.json");
-        
-        foreach (FileInfo file in files)
-        {
-            file.Delete();
-        }
-
-        Debug.Log($"<color=yellow>LIMPIEZA INICIAL: Se han borrado {files.Length} archivos de memoria.</color>");
-    }
-
     IEnumerator StartSimulation()
     {
-        yield return null; 
+        yield return null; // Esperar un frame para asegurar inicialización
         SpawnBatch("Comida", maxFood);
         SpawnBatch("Ameba", maxAmebas);
     }
@@ -54,7 +36,7 @@ public class SimulationManager2 : MonoBehaviour
     void Update()
     {
         timer += Time.deltaTime;
-        if (timer > 0.5f) // Actualizamos cada 0.5s para que el contador se vea fluido
+        if (timer > 0.5f)
         {
             MaintainBalance();
             timer = 0f;
@@ -63,28 +45,17 @@ public class SimulationManager2 : MonoBehaviour
 
     void MaintainBalance()
     {
-        // Contamos las entidades
         int currentFood = GameObject.FindGameObjectsWithTag("Comida").Length;
         int currentAmebas = GameObject.FindGameObjectsWithTag("Ameba").Length;
 
-        // --- ACTUALIZAR LA UI ---
-        if (amebaCountText != null) 
-            amebaCountText.text = "Amebas: " + currentAmebas;
-            
-        if (foodCountText != null) 
-            foodCountText.text = "Comida: " + currentFood;
-        // ------------------------
+        if (amebaCountText != null) amebaCountText.text = "Amebas: " + currentAmebas;
+        if (foodCountText != null) foodCountText.text = "Comida: " + currentFood;
 
-        // Reponer si falta (Lógica de siempre)
+        // Solo reponemos comida. Las amebas dependen de la mitosis.
         if (currentFood < maxFood)
         {
             SpawnBatch("Comida", maxFood - currentFood);
         }
-
-        // if (currentAmebas < 5) 
-        // {
-        //     SpawnBatch("Ameba", maxAmebas - currentAmebas);
-        // }
     }
 
     void SpawnBatch(string tag, int count)
@@ -97,5 +68,14 @@ public class SimulationManager2 : MonoBehaviour
             );
             ObjectPooler2.Instance.SpawnFromPool(tag, randomPos, Quaternion.identity);
         }
+    }
+
+    void DeleteAllBrainFiles()
+    {
+        string path = Application.persistentDataPath;
+        DirectoryInfo dir = new DirectoryInfo(path);
+        FileInfo[] files = dir.GetFiles("*.json");
+        foreach (FileInfo file in files) file.Delete();
+        Debug.Log($"<color=yellow>LIMPIEZA: Se han borrado {files.Length} cerebros antiguos.</color>");
     }
 }

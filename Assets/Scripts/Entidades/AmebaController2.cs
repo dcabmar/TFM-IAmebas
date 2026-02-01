@@ -1,124 +1,117 @@
 using UnityEngine;
 using System.Collections;
 
-public enum AmebaState { Trophozoite, Cyst, Digesting }
+public enum AmebaState { Trophozoite, Digesting }
 
 public class AmebaController2 : MonoBehaviour, IResetable
 {
-    
     [Header("Components")]
     public AmebaBrain brain;
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
+    public Transform visualTransform; // Arrastrar el hijo "Visuals" aquí
     private Color defaultColor;
 
     [Header("Biological Stats")]
     public AmebaState currentState = AmebaState.Trophozoite;
     public float energy = 100f;
     public float maxEnergy = 100f;
-    public float baseMaxEnergy = 100f;
-    
-    [Header("Gel Movement (Pseudopods)")]
-    public float moveForce = 10f; // Un poco más de fuerza por impulso
-    public float maxSpeed = 2f;
-    public float moveInterval = 3.0f; // <--- CAMBIO CLAVE: 3 segundos de pausa
-    private float moveTimer = 0f;
+    public float baseMaxEnergy = 100f; // Genético base
 
-    [Header("Movement & Agility")]
+    [Header("Movement Physics")]
     public float baseMoveForce = 5f;
+    public float maxSpeed = 2f;
+    public float baseMoveInterval = 0.5f;
+    private float currentMoveInterval;
+    private float moveTimer = 0f;
+    private Vector2 lastPosition; // Para medir distancia recorrida
 
-    public float baseMoveInterval = 0.5f; // Intervalo base para tamaño 1
-    private float currentMoveInterval;    // Intervalo real calculado
-
-    
     [Header("Phagocytosis")]
     public float digestionTime = 2.0f;
-    
-    [Header("Personality")]
+
+    [Header("Senses & Personality")]
     public float sensorRadius = 15f;
     private float baseSensorRadius;
+    
+    // Genes de Personalidad
     public float totalPersonalityPoints = 10f;
     [SerializeField] private float curiosityWeight;
     [SerializeField] private float greedWeight;
     [SerializeField] private float fearWeight;
 
-    [Header("Exploration")]
-    private Vector2 wanderTarget; // El punto imaginario al que quiero ir
-    private bool isWandering = false; // ¿Tengo un destino fijo ahora mismo?
-
+    // Navegación
+    private Vector2 wanderTarget;
+    private bool isWandering = false;
     private bool foodNearby = false;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         brain = GetComponent<AmebaBrain>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        defaultColor = spriteRenderer.color;
         
-        // Guardamos el rango de visión original definido en el Inspector
-        baseSensorRadius = sensorRadius; // <--- AÑADE ESTO
-        rb.sleepMode = RigidbodySleepMode2D.NeverSleep; 
+        // Buscamos el renderer en los hijos por si usas la estructura visual separada
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        if (visualTransform == null && spriteRenderer != null) 
+            visualTransform = spriteRenderer.transform;
+
+        defaultColor = spriteRenderer.color;
+        baseSensorRadius = sensorRadius;
+        
+        rb.sleepMode = RigidbodySleepMode2D.NeverSleep;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
+
     void Start()
     {
-        // 1. ASIGNAR ADN (PERSONALIDAD)
-        // Se ejecuta una sola vez al iniciar el juego. 
-        // Esta ameba siempre será "Curiosa" o "Miedosa" toda su vida.
         RandomizePersonality();
-
-        // 2. ASIGNAR APARIENCIA (COLOR)
-        // Su color también es genético y no cambia.
-        // AssignRandomColor();
-        
-        // Inicializamos el estado base
         UpdateStats();
     }
+
     public void ResetState()
     {
         StopAllCoroutines();
-        transform.localScale = Vector3.one;
         transform.SetParent(null);
-        // isBeingEaten = false;
-        
         rb.bodyType = RigidbodyType2D.Dynamic;
-        if(GetComponent<Collider2D>()) GetComponent<Collider2D>().enabled = true;
+        if (GetComponent<Collider2D>()) GetComponent<Collider2D>().enabled = true;
 
-        // Reset de variables vitales
+        // Resetear Valores
         UpdateStats();
         energy = maxEnergy;
-        
-        // Borramos la memoria (Cerebro vacío), pero mantenemos la personalidad (Tendencias)
-        if(brain != null) 
+        lastPosition = transform.position;
+
+        // Limpieza de Cerebro
+        if (brain != null)
         {
             brain.DeleteBrainFile();
             brain.data = new AmebaData();
+            
+            // --- INYECCIÓN DE INDIFERENCIA ---
+            // Nace sabiendo que las amebas valen 0. Así las ignora desde el frame 1.
+            brain.data.memoryBank.Add("Ameba", 0f);
         }
-        
-        RandomizePersonality(); // Para que nazcan con nuevos genes
-        // AssignRandomColor();
 
-        EnterTrophozoiteState();
+        RandomizePersonality();
+        currentState = AmebaState.Trophozoite;
+        
+        // Reset visual
+        if (visualTransform) visualTransform.localScale = Vector3.one;
+        spriteRenderer.color = defaultColor;
     }
 
     void UpdateStats()
     {
-        float currentSize = transform.localScale.x;
-        
-        // 1. Energía Máxima
-        maxEnergy = baseMaxEnergy + ((currentSize - 1f) * 50f);
+        // El tamaño depende de la energía máxima (capacidad)
+        float energySurplus = maxEnergy - baseMaxEnergy;
+        float newSize = 1f + (energySurplus / 50f);
+        newSize = Mathf.Max(newSize, 0.5f);
 
-        // 2. Velocidad (Las grandes son más lentas entre pasos)
-        currentMoveInterval = baseMoveInterval * currentSize; 
-        
-        // 3. Masa física
-        rb.mass = currentSize;
-        
-        // 4. RANGO DE VISIÓN (NUEVO)
-        // El radio crece linealmente con el tamaño.
-        // Si mide 1.0 -> Radio Base (15)
-        // Si mide 2.0 -> Doble de Radio (30)
-        sensorRadius = baseSensorRadius * currentSize; 
+        // Escalamos el PADRE (Hitbox física)
+        transform.localScale = Vector3.one * newSize;
+
+        // Ajustamos stats físicos
+        currentMoveInterval = baseMoveInterval * newSize;
+        rb.mass = newSize;
+        sensorRadius = baseSensorRadius * newSize;
     }
 
     void RandomizePersonality()
@@ -127,6 +120,7 @@ public class AmebaController2 : MonoBehaviour, IResetable
         float rG = Random.Range(0.1f, 1f);
         float rF = Random.Range(0.1f, 1f);
         float total = rC + rG + rF;
+        
         curiosityWeight = (rC / total) * totalPersonalityPoints;
         greedWeight = (rG / total) * totalPersonalityPoints;
         fearWeight = (rF / total) * totalPersonalityPoints;
@@ -134,237 +128,160 @@ public class AmebaController2 : MonoBehaviour, IResetable
 
     void Update()
     {
+        // Recolección de datos para IA
+        if (brain != null && brain.data != null)
+        {
+            brain.data.timeAlive += Time.deltaTime;
+            float step = Vector2.Distance(transform.position, lastPosition);
+            if (step > 0)
+            {
+                brain.data.distanceTraveled += step;
+                lastPosition = transform.position;
+            }
+        }
+
         switch (currentState)
         {
             case AmebaState.Trophozoite:
                 HandleActiveState();
                 break;
-            case AmebaState.Cyst:
-                HandleCystState();
-                break;
             case AmebaState.Digesting:
-                energy -= Time.deltaTime * 1f; 
-                // Frenar suavemente mientras digiere
-                rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, Time.deltaTime);
+                // Frenado mientras come
+                rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, Time.deltaTime * 2f);
                 break;
         }
 
-        if (energy <= 0) gameObject.SetActive(false);
+        if (energy <= 0) OnDeath();
     }
 
     void HandleActiveState()
     {
-
-
-        // 1. PRIMERO: ¿Veo algo importante? (Comida, Enemigos, Muros)
         Vector2 intention = CalculateDesires();
 
-        // 2. SEGUNDO: Si no veo nada, uso la Exploración Dirigida
         if (intention == Vector2.zero)
         {
-            // No hay estímulos, así que sigo mi ruta de patrulla
             intention = GetWanderDirection();
-            
-            // Nota: No pongo 'isWandering = false' aquí, porque quiero mantener
-            // el destino hasta llegar a él.
         }
         else
         {
-            // ¡He visto algo! (Comida o Peligro)
-            // Olvido mi ruta de patrulla anterior. Cuando termine con esto, buscaré una nueva.
             isWandering = false;
-            
-            // Dibujamos la intención prioritaria en Magenta
             Debug.DrawRay(transform.position, intention * 3f, Color.magenta);
         }
 
-        // 3. MOVIMIENTO (El resto sigue igual)
+        // Movimiento por impulsos
         moveTimer += Time.deltaTime;
-        
-        // Usamos currentMoveInterval (que depende del tamaño)
         if (moveTimer >= currentMoveInterval)
         {
-            // Ahora 'intention' nunca será cero (o es deseo o es patrulla)
             if (intention != Vector2.zero)
             {
                 float push = baseMoveForce * rb.mass;
                 rb.AddForce(intention * push, ForceMode2D.Impulse);
                 StartCoroutine(JellyEffect(intention));
+                
+                // Coste de energía proporcional al tamaño (f = float)
+                energy -= transform.localScale.x * 0.07f; 
             }
             moveTimer = 0f;
         }
 
-        rb.linearDamping = 5f; 
-        LimitSpeed();
-        energy -= Time.deltaTime * 3f;
-
-        // Chequeo de supervivencia
-        // if (brain.ShouldEncyst(energy, maxEnergy, foodNearby))
-        // {
-        //     EnterCystState();
-        // }
-    }
-
-    // --- NUEVO MÉTODO PARA CONTROLAR EXCESOS ---
-    void LimitSpeed()
-    {
+        rb.linearDamping = 5f;
         if (rb.linearVelocity.magnitude > maxSpeed)
-        {
             rb.linearVelocity = rb.linearVelocity.normalized * maxSpeed;
-        }
-    }
-
-    void HandleCystState()
-    {
-        energy -= Time.deltaTime * 0.1f;
-        CalculateDesires(); 
-        if (brain.ShouldWakeUp(foodNearby)) EnterTrophozoiteState();
-    }
-
-    void EnterCystState()
-    {
-        currentState = AmebaState.Cyst;
-        rb.linearVelocity = Vector2.zero;
-        spriteRenderer.color = Color.gray;
-        brain.data.isCyst = true;
-    }
-
-    void EnterTrophozoiteState()
-    {
-        currentState = AmebaState.Trophozoite;
-        spriteRenderer.color = defaultColor; 
-        brain.data.isCyst = false;
     }
 
     Vector2 CalculateDesires()
     {
         Vector2 totalForce = Vector2.zero;
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, sensorRadius);
-        foodNearby = false; 
+        foodNearby = false;
 
         foreach (var hit in hits)
         {
-            if (hit.gameObject == gameObject || !hit.gameObject.activeSelf) continue; 
+            if (hit.gameObject == gameObject || !hit.gameObject.activeSelf) continue;
 
-            // CALCULAR DIRECCIÓN INTELIGENTE
-            Vector2 dir = Vector2.zero;
-            float dist = 0f;
+            Vector2 dir = (hit.transform.position - transform.position).normalized;
+            float dist = Vector2.Distance(transform.position, hit.transform.position);
 
-            // TRUCO MATEMÁTICO:
-            // Si es una Zona de Peligro (Trigger grande), calculamos la distancia 
-            // al punto más cercano de su borde, no a su centro.
+            // Mejora para Muros (usar punto más cercano)
             if (hit.CompareTag("Muro"))
             {
-                Vector3 closestPoint = hit.ClosestPoint(transform.position);
-                dir = (closestPoint - transform.position).normalized;
-                dist = Vector2.Distance(transform.position, closestPoint);
+                Vector3 closest = hit.ClosestPoint(transform.position);
+                dir = (closest - transform.position).normalized;
+                dist = Vector2.Distance(transform.position, closest);
             }
-            else
-            {
-                // Para comida y amebas puntuales, usamos el centro
-                dir = (hit.transform.position - transform.position).normalized;
-                dist = Vector2.Distance(transform.position, hit.transform.position);
-            }
-            
+
             float prox = 1f / (dist + 0.1f);
+            float perceivedValue = 1f;
 
-            // Valor por defecto (para muros o desconocidos)
-            float perceivedValue = 1f; 
-
-            // 1. EVALUAR EL OBJETO
-            if (hit.CompareTag("Comida")) 
+            if (hit.CompareTag("Comida"))
             {
                 foodNearby = true;
                 Nutrient2 n = hit.GetComponent<Nutrient2>();
-                if (n != null) perceivedValue = n.energyValue; // Ej: 10
-            } else if (hit.CompareTag("Muro"))
-            {
-                // Si ya sé que es malo, huyo del borde
-                float opinion = brain.GetMemoryOpinion(hit.tag); // Será -1
-                if (opinion < 0)
-                {
-                    totalForce += (dir * -1) * Mathf.Abs(opinion) * fearWeight * prox;
-                }
-                // Si es desconocido (Curiosidad), iré hacia el borde a investigar... y me quemaré.
-                else if (brain.IsUnknown(hit.tag))
-                {
-                    totalForce += dir * curiosityWeight * prox;
-                }
+                if (n != null) perceivedValue = n.energyValue;
             }
-            
 
-            // 2. APLICAR PESOS
+            // Lógica de Cerebro
             if (brain.IsUnknown(hit.tag))
             {
+                // Curiosidad (Si Ameba=0, IsUnknown es false, así que esto se salta)
                 totalForce += dir * curiosityWeight * prox;
             }
             else
             {
-                float opinion = brain.GetMemoryOpinion(hit.tag); // Devuelve 1 o -1
+                float opinion = brain.GetMemoryOpinion(hit.tag); // 1, -1, o 0
 
-                if (opinion > 0) 
-                {
-                    // (Dirección * (Opinión * VALOR REAL) * Avaricia)
+                if (opinion > 0) // Comida
                     totalForce += dir * (opinion * perceivedValue) * greedWeight * prox;
-                }
-                else if (opinion < 0) 
-                {
-                    // Repulsión (Muro)
+                else if (opinion < 0) // Peligro
                     totalForce += (dir * -1) * Mathf.Abs(opinion) * fearWeight * prox;
-                }
+                
+                // Si opinion == 0 (Ameba), no suma nada. Indiferencia total.
             }
         }
-        return totalForce.normalized; 
+
+        // Solución Paradoja de Buridán (Empate Técnico)
+        if (totalForce == Vector2.zero && foodNearby)
+        {
+            return Random.insideUnitCircle.normalized;
+        }
+
+        return totalForce.normalized;
     }
 
     Vector2 GetWanderDirection()
     {
-        // 1. ¿Necesito un nuevo destino?
-        // Si no estoy vagando O estoy muy cerca de mi destino actual (menos de 1 unidad)
         if (!isWandering || Vector2.Distance(transform.position, wanderTarget) < 1f)
         {
-            // Calculamos un punto aleatorio DENTRO del círculo de visión
-            // Usamos .normalized * sensorRadius para que sea siempre EN EL BORDE del rango
             Vector2 randomPoint = Random.insideUnitCircle.normalized * sensorRadius;
-            
-            // El destino es mi posición actual + ese vector
             wanderTarget = (Vector2)transform.position + randomPoint;
-            
             isWandering = true;
         }
-
-        // 2. Visualización (Línea Cian hacia donde quiere ir)
-        Debug.DrawLine(transform.position, wanderTarget, Color.cyan);
-
-        // 3. Devolver la dirección hacia ese punto
         return (wanderTarget - (Vector2)transform.position).normalized;
     }
 
+    // Efecto visual separado de la física para evitar hitbox gigante
     IEnumerator JellyEffect(Vector2 direction)
     {
-        // 1. Orientación
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0, 0, angle);
+        if (visualTransform == null) yield break;
 
-        // 2. Guardamos el tamaño REAL actual antes de deformar
-        Vector3 realScale = transform.localScale;
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        visualTransform.rotation = Quaternion.Euler(0, 0, angle);
+
+        Vector3 originalScale = Vector3.one; 
         
-        // 3. Deformamos (Squash & Stretch)
-        // Estiramos en X, aplastamos en Y
-        transform.localScale = new Vector3(realScale.x * 1.3f, realScale.y * 0.7f, 1);
-        
-        // 4. Esperamos
-        yield return new WaitForSeconds(0.2f);
-        
-        // 5. IMPORTANTE: Restauramos el tamaño que guardamos al principio
-        // ¡NO llamamos a UpdateStats() aquí! Moverse no debe cambiar tus stats.
-        transform.localScale = realScale;
+        // Deformar solo lo visual
+        visualTransform.localScale = new Vector3(originalScale.x * 1.4f, originalScale.y * 0.6f, 1);
+        yield return new WaitForSeconds(0.1f);
+        visualTransform.localScale = new Vector3(originalScale.x * 0.9f, originalScale.y * 1.1f, 1);
+        yield return new WaitForSeconds(0.1f);
+        visualTransform.localScale = originalScale;
+        visualTransform.rotation = Quaternion.identity;
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    // --- COLISIONES Y ALIMENTACIÓN ---
+
+    void GestionarComida(Collider2D other)
     {
-        Debug.Log($"{name} ha tocado {other.name} (Tag: {other.tag})");
-        
         if (currentState != AmebaState.Trophozoite) return;
 
         if (other.CompareTag("Comida"))
@@ -375,37 +292,45 @@ public class AmebaController2 : MonoBehaviour, IResetable
                 StartCoroutine(Phagocytosis(n));
             }
         }
-        else if (other.CompareTag("Muro"))
-        {
-            // Aprendo inmediatamente que esto es malo
-            brain.Learn("Muro", -5f);
-        }
     }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        GestionarComida(other);
+        if (other.CompareTag("Muro")) brain.Learn("Muro", -5f);
+    }
+
     void OnTriggerStay2D(Collider2D other)
     {
+        GestionarComida(other); // Clave para cuando termina de comer una y está sobre otra
+        
         if (other.CompareTag("Muro"))
         {
-            // Daño por segundo (ej. 10 de daño por segundo)
             float damage = Time.deltaTime * 10f;
             energy -= damage;
-            
-            // Refuerzo negativo constante al cerebro
-            // Esto asegura que si se queda dentro, el miedo aumenta drásticamente
-            brain.Learn("Muro", -damage * 2f);
+            brain.Learn("Muro", -damage);
         }
     }
 
     IEnumerator Phagocytosis(Nutrient2 prey)
     {
         currentState = AmebaState.Digesting;
+        
+        if (prey == null || !prey.gameObject.activeSelf)
+        {
+            currentState = AmebaState.Trophozoite;
+            yield break;
+        }
+
         prey.isBeingDigested = true;
-        prey.GetComponent<Collider2D>().enabled = false;
+        if(prey.GetComponent<Collider2D>()) prey.GetComponent<Collider2D>().enabled = false;
+
         prey.transform.SetParent(this.transform);
         prey.transform.localPosition = Vector3.zero;
 
+        // Animación digestión
         float timer = 0;
         Vector3 startScale = prey.transform.localScale;
-
         while (timer < digestionTime)
         {
             timer += Time.deltaTime;
@@ -413,24 +338,92 @@ public class AmebaController2 : MonoBehaviour, IResetable
             yield return null;
         }
 
-        if (transform.localScale.x < 3f) 
+        // Crecimiento de capacidad
+        if (maxEnergy < baseMaxEnergy * 2f) 
         {
-            transform.localScale += Vector3.one * 0.05f;
-            UpdateStats();
+            maxEnergy += prey.energyValue; 
+            UpdateStats(); 
         }
 
         energy += prey.energyValue;
         if (energy > maxEnergy) energy = maxEnergy;
 
+        // Limpieza presa
+        brain.data.energyConsumed += prey.energyValue;
         brain.Learn("Comida", prey.energyValue);
-        
         prey.transform.SetParent(null);
         prey.gameObject.SetActive(false);
-        currentState = AmebaState.Trophozoite;
+
+        // Chequeo Mitosis
+        if (maxEnergy >= baseMaxEnergy * 2f)
+        {
+            Mitosis();
+        }
+        else
+        {
+            currentState = AmebaState.Trophozoite;
+        }
     }
-    void OnDrawGizmosSelected()
+
+    void Mitosis()
     {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, sensorRadius);
+        AmebaData childMemories = brain.data.Clone();
+
+        // 1. Asegurar Indiferencia en el Hijo
+        if (childMemories.memoryBank.ContainsKey("Ameba")) childMemories.memoryBank["Ameba"] = 0f;
+        else childMemories.memoryBank.Add("Ameba", 0f);
+
+        Vector2 randomDir = Random.insideUnitCircle.normalized;
+        Vector2 spawnPos = (Vector2)transform.position + randomDir * 0.6f; // Un poco desplazado
+        
+        GameObject childObj = ObjectPooler2.Instance.SpawnFromPool("Ameba", spawnPos, Quaternion.identity);
+        
+        if (childObj != null)
+        {
+            AmebaController2 child = childObj.GetComponent<AmebaController2>();
+            child.brain.LoadBrainData(childMemories);
+            
+            // Hijo hereda mitad de capacidad
+            child.maxEnergy = this.maxEnergy / 2f;
+            if (child.maxEnergy < baseMaxEnergy) child.maxEnergy = baseMaxEnergy;
+            child.energy = child.maxEnergy; 
+            child.UpdateStats();
+
+            // EMPUJÓN FÍSICO AL HIJO
+            if (child.GetComponent<Rigidbody2D>())
+                child.GetComponent<Rigidbody2D>().AddForce(randomDir * 10f, ForceMode2D.Impulse);
+        }
+
+        // Padre reduce capacidad
+        this.maxEnergy = this.maxEnergy / 2f;
+        if (this.maxEnergy < baseMaxEnergy) this.maxEnergy = baseMaxEnergy;
+        this.energy = this.maxEnergy; 
+        this.brain.data.generation++;
+        
+        UpdateStats(); // Padre se encoge
+        currentState = AmebaState.Trophozoite;
+
+        // EMPUJÓN FÍSICO AL PADRE (Opuesto)
+        rb.AddForce(-randomDir * 10f, ForceMode2D.Impulse);
+        StartCoroutine(FlashColor(Color.green));
+    }
+
+    void OnDeath()
+    {
+        // Guardar datos solo si vivió lo suficiente
+        if (brain != null && brain.data.timeAlive > 1.0f)
+        {
+            brain.SaveBrain();
+        }
+        gameObject.SetActive(false);
+    }
+    
+    // Helper visual
+    IEnumerator FlashColor(Color c)
+    {
+        Color old = spriteRenderer.color;
+        spriteRenderer.color = c;
+        yield return new WaitForSeconds(0.2f);
+        spriteRenderer.color = old;
     }
 }

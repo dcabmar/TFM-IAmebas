@@ -2,18 +2,24 @@ using UnityEngine;
 
 public class Nutrient2 : MonoBehaviour
 {
-    // Valor público para que la IA de la ameba pueda "leerlo" a distancia
     public float energyValue = 10f; 
-    
-    // Evita que dos amebas intenten comerse la misma bola a la vez
     public bool isBeingDigested = false; 
 
     void OnEnable()
     {
+        // 1. Resetear estado lógico
         isBeingDigested = false;
-        transform.localScale = Vector3.one * 0.2f; // Tamaño estándar
+        transform.localScale = Vector3.one * 0.2f; 
         
-        // Aseguramos que tenga collider y trigger
-        if (GetComponent<Collider2D>() == null) gameObject.AddComponent<CircleCollider2D>().isTrigger = true;
+        // 2. RECUPERAR EL COLLIDER (Solución al bug de comida fantasma)
+        Collider2D col = GetComponent<Collider2D>();
+        
+        if (col == null) 
+        {
+            col = gameObject.AddComponent<CircleCollider2D>();
+            col.isTrigger = true;
+        }
+        
+        col.enabled = true; // Aseguramos que sea detectable
     }
 }

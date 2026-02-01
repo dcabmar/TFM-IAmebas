@@ -761,8 +761,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 578bb1f9b076db94bb8981d17154df56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimulationManager2
-  maxFood: 100
-  maxAmebas: 5
+  maxFood: 50
+  maxAmebas: 2
   spawnArea: {x: 16, y: 9}
   amebaCountText: {fileID: 776814438}
   foodCountText: {fileID: 992106896}
@@ -1089,7 +1089,7 @@ MonoBehaviour:
     size: 50
   - tag: Comida
     prefab: {fileID: 2546544169535487280, guid: 629fc8513095c734f8e5be37ea5e3f61, type: 3}
-    size: 100
+    size: 150
 --- !u!1 &992106894
 GameObject:
   m_ObjectHideFlags: 0

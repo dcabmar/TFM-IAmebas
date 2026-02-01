@@ -11,30 +11,13 @@ public class AmebaBrain : MonoBehaviour
         data = new AmebaData();
     }
 
-    // --- NUEVO: Decisión de Supervivencia ---
-    // Retorna TRUE si el ambiente es hostil y debe enquistarse
-    public bool ShouldEncyst(float currentEnergy, float maxEnergy, bool foodNearby)
-    {
-        // Regla biológica: Si tengo poca energía Y no veo comida -> Me hago Quiste
-        if (currentEnergy < (maxEnergy * 0.2f) && !foodNearby)
-        {
-            return true;
-        }
-        return false;
-    }
-
-    // Retorna TRUE si las condiciones mejoraron (veo comida)
-    public bool ShouldWakeUp(bool foodNearby)
-    {
-        return foodNearby;
-    }
-    // ----------------------------------------
-
+    // Devuelve TRUE si no tenemos registro de este objeto
     public bool IsUnknown(string objectTag)
     {
         return !data.memoryBank.ContainsKey(objectTag);
     }
 
+    // Devuelve la opinión (-1: Miedo, 1: Gusto, 0: Indiferencia)
     public float GetMemoryOpinion(string objectTag)
     {
         if (data.memoryBank.ContainsKey(objectTag))
@@ -44,26 +27,28 @@ public class AmebaBrain : MonoBehaviour
         return 0f;
     }
 
+    // Refuerzo positivo o negativo
     public void Learn(string objectTag, float energyDelta)
     {
         float opinion = 0f;
-        if (energyDelta > 0) opinion = 1f;
-        else if (energyDelta < 0) opinion = -1f;
-        else opinion = 0.1f;
+        if (energyDelta > 0) opinion = 1f;       // Comida
+        else if (energyDelta < 0) opinion = -1f; // Daño
+        else opinion = 0f;                       // Indiferencia (Amebas)
 
         if (!data.memoryBank.ContainsKey(objectTag))
             data.memoryBank.Add(objectTag, opinion);
         else
+            // Promedio ponderado simple para suavizar el aprendizaje
             data.memoryBank[objectTag] = (data.memoryBank[objectTag] + opinion) / 2f;
 
-        SaveBrain();
+        // Guardado opcional en tiempo real (puede causar lag si son muchas)
+        // SaveBrain(); 
     }
 
     public void SaveBrain()
     {
         string path = Application.persistentDataPath + "/" + data.name + ".json";
         string json = JsonConvert.SerializeObject(data, Formatting.Indented);
-        // Descomenta esto si quieres guardar de verdad (cuidado con el rendimiento)
         File.WriteAllText(path, json); 
     }
     
@@ -71,5 +56,10 @@ public class AmebaBrain : MonoBehaviour
     {
         string path = Application.persistentDataPath + "/" + data.name + ".json";
         if (File.Exists(path)) File.Delete(path);
+    }
+
+    public void LoadBrainData(AmebaData newData)
+    {
+        this.data = newData;
     }
 }

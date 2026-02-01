@@ -140,5 +140,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e5c23f7a09974f24c83f6ea0b0f68f62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Nutrient2
-  energyValue: 50
+  energyValue: 10
   isBeingDigested: 0

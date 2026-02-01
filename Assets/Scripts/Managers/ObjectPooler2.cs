@@ -1,6 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Interfaz para obligar a reiniciar objetos reciclados
+public interface IResetable
+{
+    void ResetState();
+}
+
 public class ObjectPooler2 : MonoBehaviour
 {
     public static ObjectPooler2 Instance;
@@ -19,24 +25,20 @@ public class ObjectPooler2 : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        // 1. Inicializamos la "caja" vacía AQUÍ. Así nunca dará error de NullReference.
         poolDictionary = new Dictionary<string, Queue<GameObject>>();
     }
 
     void Start()
     {
-        // 2. La operación pesada de crear objetos la dejamos en Start
         foreach (Pool pool in pools)
         {
             Queue<GameObject> objectPool = new Queue<GameObject>();
-
             for (int i = 0; i < pool.size; i++)
             {
                 GameObject obj = Instantiate(pool.prefab);
                 obj.SetActive(false);
                 objectPool.Enqueue(obj);
             }
-
             poolDictionary.Add(pool.tag, objectPool);
         }
     }
@@ -55,7 +57,7 @@ public class ObjectPooler2 : MonoBehaviour
         objectToSpawn.transform.position = position;
         objectToSpawn.transform.rotation = rotation;
 
-        // Si tiene interfaz de reseteo (como la ameba), la llamamos
+        // Resetear el objeto (limpiar cerebro, energía, etc.)
         IResetable resetable = objectToSpawn.GetComponent<IResetable>();
         if (resetable != null)
         {
@@ -63,13 +65,6 @@ public class ObjectPooler2 : MonoBehaviour
         }
 
         poolDictionary[tag].Enqueue(objectToSpawn);
-
         return objectToSpawn;
     }
-}
-
-// Pequeña interfaz para obligar a los objetos a reiniciarse al nacer
-public interface IResetable
-{
-    void ResetState();
 }
