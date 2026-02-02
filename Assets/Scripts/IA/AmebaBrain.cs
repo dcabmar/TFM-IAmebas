@@ -11,13 +11,11 @@ public class AmebaBrain : MonoBehaviour
         data = new AmebaData();
     }
 
-    // Devuelve TRUE si no tenemos registro de este objeto
     public bool IsUnknown(string objectTag)
     {
         return !data.memoryBank.ContainsKey(objectTag);
     }
 
-    // Devuelve la opinión (-1: Miedo, 1: Gusto, 0: Indiferencia)
     public float GetMemoryOpinion(string objectTag)
     {
         if (data.memoryBank.ContainsKey(objectTag))
@@ -27,34 +25,37 @@ public class AmebaBrain : MonoBehaviour
         return 0f;
     }
 
-    // Refuerzo positivo o negativo
     public void Learn(string objectTag, float energyDelta)
     {
         float opinion = 0f;
-        if (energyDelta > 0) opinion = 1f;       // Comida
-        else if (energyDelta < 0) opinion = -1f; // Daño
-        else opinion = 0f;                       // Indiferencia (Amebas)
+        if (energyDelta > 0) opinion = 1f;       
+        else if (energyDelta < 0) opinion = -1f; 
+        else opinion = 0f;                       
 
         if (!data.memoryBank.ContainsKey(objectTag))
             data.memoryBank.Add(objectTag, opinion);
         else
-            // Promedio ponderado simple para suavizar el aprendizaje
             data.memoryBank[objectTag] = (data.memoryBank[objectTag] + opinion) / 2f;
-
-        // Guardado opcional en tiempo real (puede causar lag si son muchas)
-        // SaveBrain(); 
     }
 
     public void SaveBrain()
     {
-        string path = Application.persistentDataPath + "/" + data.name + ".json";
+        // --- CAMBIO CLAVE: Usamos la ruta de la sesión actual ---
+        if (string.IsNullOrEmpty(SimulationManager2.CurrentSessionPath)) return;
+
+        string path = SimulationManager2.CurrentSessionPath + "/" + data.name + ".json";
         string json = JsonConvert.SerializeObject(data, Formatting.Indented);
+        
+        // Escribimos el archivo
         File.WriteAllText(path, json); 
     }
     
     public void DeleteBrainFile()
     {
-        string path = Application.persistentDataPath + "/" + data.name + ".json";
+        // También buscamos en la carpeta correcta para borrar si hace falta
+        if (string.IsNullOrEmpty(SimulationManager2.CurrentSessionPath)) return;
+
+        string path = SimulationManager2.CurrentSessionPath + "/" + data.name + ".json";
         if (File.Exists(path)) File.Delete(path);
     }
 
