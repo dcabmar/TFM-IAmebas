@@ -1,7 +1,9 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public enum AmebaState { Trophozoite, Digesting }
+// public enum GeneType { Pacifist, Predator } 
 
 public class AmebaController2 : MonoBehaviour, IResetable
 {
@@ -10,61 +12,48 @@ public class AmebaController2 : MonoBehaviour, IResetable
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     public Transform visualTransform;
-    private Color defaultColor;
 
     [Header("Biological Stats")]
     public AmebaState currentState = AmebaState.Trophozoite;
     public float energy = 100f;
-    public float maxEnergy = 100f;
-    public float baseMaxEnergy = 100f;
+    public float maxEnergy = 100f;       
+    public float reproductionThreshold = 120f;  
+    
+    public float baseInterval = 2.0f;
+    public float baseVision = 10f;
+    public float baseForce = 2f; // Fuerza bajada para control
+    [Header("Gene Stats (Calculated)")]
+    public float moveForce;         
+    public float moveInterval;      
+    public float sensorRadius;      
+    public float attackDamage;      
+    public bool canAttack;          
 
-    [Header("Movement Physics")]
-    public float baseMoveForce = 5f;
-    public float maxSpeed = 2f;
-    public float baseMoveInterval = 0.5f;
-    private float currentMoveInterval;
+    // --- CEREBRO INTERCAMBIABLE ---
+    private AmebaBehavior currentBehavior; 
+    // ------------------------------
+
+    // Variables Internas
     private float moveTimer = 0f;
+    private float lastAttackTime = 0f;
+    private float attackCooldown = 1.0f;
     private Vector2 lastPosition; 
 
-    [Header("Phagocytosis")]
-    public float digestionTime = 2.0f;
-
-    [Header("Senses & Personality")]
-    public float sensorRadius = 15f;
-    private float baseSensorRadius;
-    
-    public float totalPersonalityPoints = 10f;
-    [SerializeField] private float curiosityWeight;
-    [SerializeField] private float greedWeight;
-    [SerializeField] private float fearWeight;
-
+    // --- RECUPERADO: Variables de Exploración Visual ---
     private Vector2 wanderTarget;
     private bool isWandering = false;
-    private bool foodNearby = false;
+    // ---------------------------------------------------
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         brain = GetComponent<AmebaBrain>();
-        
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         if (visualTransform == null && spriteRenderer != null) 
             visualTransform = spriteRenderer.transform;
-
-        defaultColor = spriteRenderer.color;
-        baseSensorRadius = sensorRadius;
         
         rb.sleepMode = RigidbodySleepMode2D.NeverSleep;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-
-        // --- CORRECCIÓN 1: ELIMINADO EL GUARDADO AQUÍ ---
-        // No guardamos en Awake para evitar crear archivos de amebas del Pool que no juegan.
-    }
-
-    void Start()
-    {
-        RandomizePersonality();
-        UpdateStats();
     }
 
     public void ResetState()
@@ -73,170 +62,127 @@ public class AmebaController2 : MonoBehaviour, IResetable
         transform.SetParent(null);
         rb.bodyType = RigidbodyType2D.Dynamic;
         if (GetComponent<Collider2D>()) GetComponent<Collider2D>().enabled = true;
-
-        UpdateStats();
-        energy = maxEnergy;
-        lastPosition = transform.position;
-
+        
         if (brain != null)
         {
-            // --- CORRECCIÓN 2: NO BORRAMOS EL ARCHIVO ANTERIOR ---
-            // Queremos mantener el JSON de la ameba muerta para el Dataset.
-            // brain.DeleteBrainFile(); <--- BORRADO
-            
-            // Creamos una nueva identidad
-            brain.data = new AmebaData();
-            
-            // Inyectamos conocimiento base (Indiferencia a otras amebas)
-            brain.data.memoryBank.Add("Ameba", 0f);
-            
-            // --- CORRECCIÓN 3: NO GUARDAMOS AÚN ---
-            // Esperamos a que viva y acumule datos antes de guardar.
+            if (brain.data == null || brain.data.genome.Count == 0)
+            {
+                brain.data = new AmebaData();
+                brain.data.memoryBank.Add("Ameba", 0f);
+                GenerateRandomGenome();
+            }
+            DetermineSpeciesAndStats(); 
         }
         
-        RandomizePersonality();
+        energy = maxEnergy; 
+        lastPosition = transform.position;
         currentState = AmebaState.Trophozoite;
-        
-        if (visualTransform) visualTransform.localScale = Vector3.one;
-        spriteRenderer.color = defaultColor;
+        // Reiniciamos variables de patrulla
+        isWandering = false;
+        UpdateVisuals();
     }
 
-    void UpdateStats()
+    // --- SISTEMA GENÉTICO ---
+    void GenerateRandomGenome()
     {
-        float energySurplus = maxEnergy - baseMaxEnergy;
-        float newSize = 1f + (energySurplus / 50f);
-        newSize = Mathf.Max(newSize, 0.5f);
-
-        transform.localScale = Vector3.one * newSize;
-
-        currentMoveInterval = baseMoveInterval * newSize;
-        rb.mass = newSize;
-        sensorRadius = baseSensorRadius * newSize;
+        brain.data.genome.Clear();
+        for (int i = 0; i < 7; i++) 
+            brain.data.genome.Add((GeneType)Random.Range(0, 2)); 
     }
 
-    void RandomizePersonality()
+    void DetermineSpeciesAndStats()
     {
-        float rC = Random.Range(0.1f, 1f);
-        float rG = Random.Range(0.1f, 1f);
-        float rF = Random.Range(0.1f, 1f);
-        float total = rC + rG + rF;
+        var d = brain.data;
+        d.countPacifist = 0; 
+        d.countPredator = 0;
+
+        foreach (GeneType g in d.genome)
+        {
+            if (g == GeneType.Pacifist) d.countPacifist++;
+            else if (g == GeneType.Predator) d.countPredator++;
+        }
+
+        // Stats Pacifista
+        moveInterval = Mathf.Max(0.5f, baseInterval - (d.countPacifist * 0.2f));
+        sensorRadius = baseVision + (d.countPacifist * 2f);
+
+        // Stats Depredador
+        moveForce = baseForce + (d.countPredator * 0.5f); 
+        attackDamage = 5f + (d.countPredator * 2f);
+        canAttack = (d.countPredator > 0); 
+
+        // Asignar Cerebro
+        if (d.countPredator > d.countPacifist)
+        {
+            d.species = GeneType.Predator;
+            currentBehavior = new PredatorBehavior(this); 
+        }
+        else
+        {
+            d.species = GeneType.Pacifist;
+            currentBehavior = new PacifistBehavior(this); 
+        }
         
-        curiosityWeight = (rC / total) * totalPersonalityPoints;
-        greedWeight = (rG / total) * totalPersonalityPoints;
-        fearWeight = (rF / total) * totalPersonalityPoints;
+        UpdateSize();
     }
 
+    // --- UPDATE ---
     void Update()
     {
-        if (brain != null && brain.data != null)
+        if (brain != null)
         {
             brain.data.timeAlive += Time.deltaTime;
             float step = Vector2.Distance(transform.position, lastPosition);
-            if (step > 0)
-            {
-                brain.data.distanceTraveled += step;
-                lastPosition = transform.position;
-            }
+            if (step > 0) { brain.data.distanceTraveled += step; lastPosition = transform.position; }
         }
+
+        if (energy <= 0) { Die(); return; }
 
         switch (currentState)
         {
             case AmebaState.Trophozoite:
-                HandleActiveState();
+                // Frenado necesario
+                rb.linearVelocity = rb.linearVelocity * 0.98f; 
+
+                if (currentBehavior != null)
+                {
+                    // 1. Calcular Deseos
+                    Vector2 intention = currentBehavior.CalculateDesires(sensorRadius);
+                    
+                    // 2. Moverse (Con visualización recuperada)
+                    HandleMovement(intention);
+
+                    // 3. Interactuar
+                    CheckSurroundings();
+                }
                 break;
+                
             case AmebaState.Digesting:
                 rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, Time.deltaTime * 2f);
                 break;
         }
-
-        // Si muere por energía, simplemente desactivamos.
-        // El guardado ocurrirá automáticamente en OnDisable.
-        if (energy <= 0) gameObject.SetActive(false);
     }
 
-    void HandleActiveState()
+    void HandleMovement(Vector2 intention)
     {
-        Vector2 intention = CalculateDesires();
-
-        if (intention == Vector2.zero)
+        if (intention != Vector2.zero)
         {
-            intention = GetWanderDirection();
+            isWandering = false; 
+            Debug.DrawRay(transform.position, intention * 3f, Color.magenta);
         }
         else
         {
-            isWandering = false;
-            Debug.DrawRay(transform.position, intention * 3f, Color.magenta);
+            intention = GetWanderDirection();
         }
 
         moveTimer += Time.deltaTime;
-        if (moveTimer >= currentMoveInterval)
+        if (moveTimer >= moveInterval)
         {
-            if (intention != Vector2.zero)
-            {
-                float push = baseMoveForce * rb.mass;
-                rb.AddForce(intention * push, ForceMode2D.Impulse);
-                StartCoroutine(JellyEffect(intention));
-                energy -= transform.localScale.x * 0.07f; 
-            }
+            rb.AddForce(intention * moveForce * rb.mass, ForceMode2D.Impulse);
+            StartCoroutine(JellyEffect(intention));
+            energy -= transform.localScale.x * 0.1f; 
             moveTimer = 0f;
         }
-
-        rb.linearDamping = 5f;
-        if (rb.linearVelocity.magnitude > maxSpeed)
-            rb.linearVelocity = rb.linearVelocity.normalized * maxSpeed;
-    }
-
-    Vector2 CalculateDesires()
-    {
-        Vector2 totalForce = Vector2.zero;
-        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, sensorRadius);
-        foodNearby = false;
-
-        foreach (var hit in hits)
-        {
-            if (hit.gameObject == gameObject || !hit.gameObject.activeSelf) continue;
-
-            Vector2 dir = (hit.transform.position - transform.position).normalized;
-            float dist = Vector2.Distance(transform.position, hit.transform.position);
-
-            if (hit.CompareTag("Muro"))
-            {
-                Vector3 closest = hit.ClosestPoint(transform.position);
-                dir = (closest - transform.position).normalized;
-                dist = Vector2.Distance(transform.position, closest);
-            }
-
-            float prox = 1f / (dist + 0.1f);
-            float perceivedValue = 1f;
-
-            if (hit.CompareTag("Comida"))
-            {
-                foodNearby = true;
-                Nutrient2 n = hit.GetComponent<Nutrient2>();
-                if (n != null) perceivedValue = n.energyValue;
-            }
-
-            if (brain.IsUnknown(hit.tag))
-            {
-                totalForce += dir * curiosityWeight * prox;
-            }
-            else
-            {
-                float opinion = brain.GetMemoryOpinion(hit.tag);
-
-                if (opinion > 0) 
-                    totalForce += dir * (opinion * perceivedValue) * greedWeight * prox;
-                else if (opinion < 0) 
-                    totalForce += (dir * -1) * Mathf.Abs(opinion) * fearWeight * prox;
-            }
-        }
-
-        if (totalForce == Vector2.zero && foodNearby)
-        {
-            return Random.insideUnitCircle.normalized;
-        }
-
-        return totalForce.normalized;
     }
 
     Vector2 GetWanderDirection()
@@ -247,176 +193,209 @@ public class AmebaController2 : MonoBehaviour, IResetable
             wanderTarget = (Vector2)transform.position + randomPoint;
             isWandering = true;
         }
+
+        Debug.DrawLine(transform.position, wanderTarget, Color.cyan);
+        // CORRECCIÓN: Usamos DrawLine para hacer una crucecita en lugar de DrawWireSphere
+        Vector3 p = wanderTarget;
+        Debug.DrawLine(new Vector3(p.x - 0.2f, p.y, 0), new Vector3(p.x + 0.2f, p.y, 0), Color.cyan);
+        Debug.DrawLine(new Vector3(p.x, p.y - 0.2f, 0), new Vector3(p.x, p.y + 0.2f, 0), Color.cyan);
+
         return (wanderTarget - (Vector2)transform.position).normalized;
     }
 
-    IEnumerator JellyEffect(Vector2 direction)
+    // --- COMBATE ---
+    void CheckSurroundings()
     {
-        if (visualTransform == null) yield break;
-
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        visualTransform.rotation = Quaternion.Euler(0, 0, angle);
-
-        Vector3 originalScale = Vector3.one; 
-        visualTransform.localScale = new Vector3(originalScale.x * 1.4f, originalScale.y * 0.6f, 1);
-        yield return new WaitForSeconds(0.1f);
-        visualTransform.localScale = new Vector3(originalScale.x * 0.9f, originalScale.y * 1.1f, 1);
-        yield return new WaitForSeconds(0.1f);
-        visualTransform.localScale = originalScale;
-        visualTransform.rotation = Quaternion.identity;
-    }
-
-    void GestionarComida(Collider2D other)
-    {
-        if (currentState != AmebaState.Trophozoite) return;
-
-        if (other.CompareTag("Comida"))
+        float range = GetAttackRange();
+        Collider2D[] close = Physics2D.OverlapCircleAll(transform.position, range);
+        
+        foreach(var hit in close)
         {
-            Nutrient2 n = other.GetComponent<Nutrient2>();
-            if (n != null && !n.isBeingDigested)
+            if(hit.gameObject == gameObject) continue;
+            
+            if (hit.CompareTag("Ameba"))
             {
-                StartCoroutine(Phagocytosis(n));
+                AmebaController2 other = hit.GetComponent<AmebaController2>();
+                if(other != null)
+                {
+                    currentBehavior.HandleProximity(other, Vector2.Distance(transform.position, other.transform.position));
+                }
             }
         }
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    public void TryPerformAttack(AmebaController2 target)
     {
-        GestionarComida(other);
-        if (other.CompareTag("Muro")) brain.Learn("Muro", -5f);
-    }
+        if (!canAttack) return;
+        if (Time.time < lastAttackTime + attackCooldown) return;
 
-    void OnTriggerStay2D(Collider2D other)
-    {
-        GestionarComida(other);
-        
-        if (other.CompareTag("Muro"))
+        if (target.transform.localScale.x <= transform.localScale.x * 0.6f)
         {
-            float damage = Time.deltaTime * 10f;
-            energy -= damage;
-            brain.Learn("Muro", -damage);
-        }
-    }
-
-    IEnumerator Phagocytosis(Nutrient2 prey)
-    {
-        currentState = AmebaState.Digesting;
-        
-        if (prey == null || !prey.gameObject.activeSelf)
-        {
-            currentState = AmebaState.Trophozoite;
-            yield break;
-        }
-
-        prey.isBeingDigested = true;
-        if(prey.GetComponent<Collider2D>()) prey.GetComponent<Collider2D>().enabled = false;
-
-        prey.transform.SetParent(this.transform);
-        prey.transform.localPosition = Vector3.zero;
-
-        float timer = 0;
-        Vector3 startScale = prey.transform.localScale;
-        while (timer < digestionTime)
-        {
-            timer += Time.deltaTime;
-            prey.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, timer / digestionTime);
-            yield return null;
-        }
-
-        if (maxEnergy < baseMaxEnergy * 2f) 
-        {
-            maxEnergy += prey.energyValue; 
-            UpdateStats(); 
-        }
-
-        energy += prey.energyValue;
-        if (energy > maxEnergy) energy = maxEnergy;
-
-        brain.data.energyConsumed += prey.energyValue;
-        brain.Learn("Comida", prey.energyValue);
-        prey.transform.SetParent(null);
-        prey.gameObject.SetActive(false);
-
-        if (maxEnergy >= baseMaxEnergy * 2f)
-        {
-            Mitosis();
+            StartCoroutine(PhagocytosisAmeba(target));
         }
         else
         {
-            currentState = AmebaState.Trophozoite;
+            Vector2 knockDir = (target.transform.position - transform.position).normalized;
+            target.TakeDamage(attackDamage, knockDir, this); 
         }
+        
+        lastAttackTime = Time.time;
+    }
+
+    public void TakeDamage(float amount, Vector2 dir, AmebaController2 attacker)
+    {
+        energy -= amount;
+        rb.AddForce(dir * attacker.transform.localScale.x * 5f, ForceMode2D.Impulse); 
+        StartCoroutine(FlashColor(Color.white)); 
+
+        if (energy <= 0) 
+        {
+            if (attacker != null) attacker.ReceiveKillReward(this.maxEnergy);
+            Die();
+        }
+    }
+
+    public void ReceiveKillReward(float victimMaxEnergy)
+    {
+        float bonus = victimMaxEnergy * 0.5f;
+        maxEnergy += bonus;
+        energy = maxEnergy; 
+        UpdateSize();
+        StartCoroutine(FlashColor(Color.yellow)); 
+        if (maxEnergy > reproductionThreshold) Mitosis();
+    }
+
+    // --- ALIMENTACIÓN ---
+    
+    IEnumerator PhagocytosisAmeba(AmebaController2 prey)
+    {
+        currentState = AmebaState.Digesting;
+        prey.enabled = false;
+        if(prey.GetComponent<Collider2D>()) prey.GetComponent<Collider2D>().enabled = false;
+        prey.transform.SetParent(transform);
+        prey.transform.localPosition = Vector3.zero;
+
+        float t = 0;
+        while(t < 2.0f) {
+            t += Time.deltaTime;
+            prey.transform.localScale = Vector3.Lerp(prey.transform.localScale, Vector3.zero, t/2f);
+            yield return null;
+        }
+
+        maxEnergy += prey.maxEnergy * 0.5f;
+        energy = maxEnergy;
+        
+        prey.transform.SetParent(null); // Soltar al pool
+        prey.gameObject.SetActive(false);
+        currentState = AmebaState.Trophozoite;
+        UpdateSize();
+        
+        if (maxEnergy > reproductionThreshold) Mitosis();
+    }
+
+    void OnTriggerEnter2D(Collider2D col)
+    {
+        if (currentState != AmebaState.Trophozoite) return;
+
+        if (col.CompareTag("Comida"))
+        {
+            // --- CORRECCIÓN CRÍTICA: LOS DEPREDADORES SON CARNÍVOROS STRICTOS ---
+            if (brain.data.species == GeneType.Predator) return; // Ignoran la ensalada
+            // -------------------------------------------------------------------
+
+            Nutrient2 n = col.GetComponent<Nutrient2>();
+            if(n != null && !n.isBeingDigested) StartCoroutine(PhagocytosisNutrient(n));
+        }
+        else if (col.CompareTag("Muro")) brain.Learn("Muro", -5f);
+    }
+
+    IEnumerator PhagocytosisNutrient(Nutrient2 nutrient)
+    {
+        currentState = AmebaState.Digesting;
+        nutrient.isBeingDigested = true;
+        if(nutrient.GetComponent<Collider2D>()) nutrient.GetComponent<Collider2D>().enabled = false;
+        nutrient.transform.SetParent(transform);
+
+        float t = 0;
+        Vector3 startScale = nutrient.transform.localScale;
+        while(t < 1.0f) {
+            t += Time.deltaTime;
+            nutrient.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
+            yield return null;
+        }
+
+        energy += nutrient.energyValue;
+        if (energy > maxEnergy) energy = maxEnergy;
+        if (maxEnergy < reproductionThreshold * 1.5f) { maxEnergy += 1f; UpdateSize(); } 
+
+        nutrient.transform.SetParent(null); // Soltar al pool
+        nutrient.gameObject.SetActive(false);
+        currentState = AmebaState.Trophozoite;
+        
+        if (maxEnergy >= reproductionThreshold) Mitosis();
     }
 
     void Mitosis()
     {
         AmebaData childMemories = brain.data.Clone();
-
-        if (childMemories.memoryBank.ContainsKey("Ameba")) childMemories.memoryBank["Ameba"] = 0f;
-        else childMemories.memoryBank.Add("Ameba", 0f);
-
         Vector2 randomDir = Random.insideUnitCircle.normalized;
         Vector2 spawnPos = (Vector2)transform.position + randomDir * 0.6f;
         
         GameObject childObj = ObjectPooler2.Instance.SpawnFromPool("Ameba", spawnPos, Quaternion.identity);
-        
         if (childObj != null)
         {
             AmebaController2 child = childObj.GetComponent<AmebaController2>();
             child.brain.LoadBrainData(childMemories);
-            
-            child.maxEnergy = this.maxEnergy / 2f;
-            if (child.maxEnergy < baseMaxEnergy) child.maxEnergy = baseMaxEnergy;
-            child.energy = child.maxEnergy; 
-            child.UpdateStats();
-
-            if (child.GetComponent<Rigidbody2D>())
-                child.GetComponent<Rigidbody2D>().AddForce(randomDir * 10f, ForceMode2D.Impulse);
+            child.ResetState(); 
+            child.maxEnergy = maxEnergy / 2f; 
+            child.energy = child.maxEnergy;
+            child.UpdateSize();
+            child.GetComponent<Rigidbody2D>().AddForce(randomDir * 5f, ForceMode2D.Impulse);
         }
 
-        this.maxEnergy = this.maxEnergy / 2f;
-        if (this.maxEnergy < baseMaxEnergy) this.maxEnergy = baseMaxEnergy;
-        this.energy = this.maxEnergy; 
-        this.brain.data.generation++;
-        
-        UpdateStats();
-        currentState = AmebaState.Trophozoite;
-
-        rb.AddForce(-randomDir * 10f, ForceMode2D.Impulse);
-        StartCoroutine(FlashColor(Color.green));
+        maxEnergy /= 2f;
+        energy = maxEnergy;
+        UpdateSize();
+        rb.AddForce(-randomDir * 5f, ForceMode2D.Impulse);
     }
 
-    // --- GUARDADO UNIFICADO ---
-    // OnDisable se ejecuta en dos casos:
-    // 1. Cuando la ameba muere (SetActive false).
-    // 2. Cuando cierras el juego (Application Quit).
-    void OnDisable()
-    {
-        // Filtramos para no guardar "ruido": Solo amebas que hayan vivido más de 1 segundo.
-        if (brain != null && brain.data.timeAlive > 1.0f)
-        {
-            brain.SaveBrain();
-        }
+    // --- UTILIDADES ---
+    public float GetAttackRange() { return transform.localScale.x * 1.5f; }
+    void UpdateSize() { 
+        float size = Mathf.Max(0.5f, maxEnergy / 100f);
+        transform.localScale = Vector3.one * size; 
+        rb.mass = size; 
+    }
+    void Die() { brain.SaveBrain(); gameObject.SetActive(false); }
+    void UpdateVisuals() { 
+        if (brain.data.species == GeneType.Pacifist) spriteRenderer.color = Color.green;
+        else spriteRenderer.color = Color.red;
+    }
+    void OnDisable() { if (brain != null && brain.data.timeAlive > 1.0f) brain.SaveBrain(); }
+
+    IEnumerator JellyEffect(Vector2 d) 
+    { 
+        if(!visualTransform) yield break;
+        float angle = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+        visualTransform.rotation = Quaternion.Euler(0,0,angle);
+        visualTransform.localScale = new Vector3(1.3f, 0.7f, 1);
+        yield return new WaitForSeconds(0.1f);
+        visualTransform.localScale = Vector3.one;
+        visualTransform.rotation = Quaternion.identity;
     }
     
-    IEnumerator FlashColor(Color c)
-    {
-        Color old = spriteRenderer.color;
-        spriteRenderer.color = c;
-        yield return new WaitForSeconds(0.2f);
-        spriteRenderer.color = old;
+    IEnumerator FlashColor(Color c) 
+    { 
+        spriteRenderer.color = c; 
+        yield return new WaitForSeconds(0.1f); 
+        UpdateVisuals(); 
     }
+
     void OnDrawGizmosSelected()
     {
-        // Dibuja el radio de visión en rojo cuando seleccionas la ameba
-        Gizmos.color = Color.red;
+        Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, sensorRadius);
-
-        // OPCIONAL: Dibujar la línea hacia el destino de patrulla (si existe)
-        if (isWandering)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawLine(transform.position, wanderTarget);
-            Gizmos.DrawWireSphere(wanderTarget, 0.5f);
-        }
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, GetAttackRange());
     }
 }

@@ -206,18 +206,15 @@ MonoBehaviour:
   currentState: 0
   energy: 100
   maxEnergy: 100
-  baseMaxEnergy: 100
-  moveForce: 10
-  maxSpeed: 2
+  reproductionThreshold: 200
+  baseInterval: 2
+  baseVision: 5
+  baseForce: 5
+  moveForce: 4
   moveInterval: 3
-  baseMoveForce: 5
-  baseMoveInterval: 0.5
-  digestionTime: 2
   sensorRadius: 2
-  totalPersonalityPoints: 10
-  curiosityWeight: 0
-  greedWeight: 0
-  fearWeight: 0
+  attackDamage: 0
+  canAttack: 0
 --- !u!114 &8915645204564950856
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -237,3 +234,7 @@ MonoBehaviour:
     timeAlive: 0
     distanceTraveled: 0
     energyConsumed: 0
+    genome: 
+    species: 0
+    countPacifist: 0
+    countPredator: 0

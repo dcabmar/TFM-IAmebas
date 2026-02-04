@@ -1,0 +1,24 @@
+{
+  "name": "Ameba_df51",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 84.30289,
+  "distanceTraveled": 109.76783,
+  "energyConsumed": 0.0,
+  "genome": [
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0
+  ],
+  "species": 1,
+  "countPacifist": 3,
+  "countPredator": 4,
+  "memoryBank": {
+    "Ameba": 0.0,
+    "Muro": -1.0
+  }
+}
