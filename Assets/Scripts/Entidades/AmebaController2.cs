@@ -276,14 +276,14 @@ public class AmebaController2 : MonoBehaviour, IResetable
         prey.transform.localPosition = Vector3.zero;
 
         float t = 0;
-        while(t < 2.0f) {
+        while(t < 4.0f) {
             t += Time.deltaTime;
-            prey.transform.localScale = Vector3.Lerp(prey.transform.localScale, Vector3.zero, t/2f);
+            prey.transform.localScale = Vector3.Lerp(prey.transform.localScale, Vector3.zero, t);
             yield return null;
         }
 
-        maxEnergy += prey.maxEnergy * 0.5f;
-        energy = maxEnergy;
+        maxEnergy += prey.maxEnergy;
+        energy += prey.maxEnergy;
         
         prey.transform.SetParent(null); // Soltar al pool
         prey.gameObject.SetActive(false);
@@ -318,7 +318,7 @@ public class AmebaController2 : MonoBehaviour, IResetable
 
         float t = 0;
         Vector3 startScale = nutrient.transform.localScale;
-        while(t < 1.0f) {
+        while(t < 2.0f) {
             t += Time.deltaTime;
             nutrient.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
             yield return null;
@@ -326,7 +326,7 @@ public class AmebaController2 : MonoBehaviour, IResetable
 
         energy += nutrient.energyValue;
         if (energy > maxEnergy) energy = maxEnergy;
-        if (maxEnergy < reproductionThreshold * 1.5f) { maxEnergy += 1f; UpdateSize(); } 
+        if (maxEnergy < reproductionThreshold * 1.5f) { maxEnergy += nutrient.energyValue; UpdateSize(); } 
 
         nutrient.transform.SetParent(null); // Soltar al pool
         nutrient.gameObject.SetActive(false);

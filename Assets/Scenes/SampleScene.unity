@@ -762,7 +762,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimulationManager2
   maxFood: 50
-  maxAmebas: 8
+  maxAmebas: 7
   spawnArea: {x: 16, y: 9}
   amebaCountText: {fileID: 776814438}
   foodCountText: {fileID: 992106896}

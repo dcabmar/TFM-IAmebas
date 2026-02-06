@@ -26,7 +26,7 @@ public class PacifistBehavior : AmebaBehavior
             float weight = 1f / (dist + 0.1f);
 
             if (hit.CompareTag("Comida")) force += dir * 2.0f * weight; 
-            else if (hit.CompareTag("Ameba") || hit.CompareTag("Muro")) force -= dir * 1.5f * weight; 
+            else if (hit.CompareTag("Ameba") || hit.CompareTag("Muro")) force -= dir * 4f * weight; 
         }
         return force.normalized;
     }
@@ -55,23 +55,45 @@ public class PredatorBehavior : AmebaBehavior
 
             if (hit.CompareTag("Ameba")) 
             {
-                force += dir * 5.0f * weight; 
-                preyFound = true;
+                // Obtenemos el script de la otra ameba para ver su ADN
+                AmebaController2 otherAmeba = hit.GetComponent<AmebaController2>();
+                
+                if (otherAmeba != null && otherAmeba.brain != null)
+                {
+                    // CASO A: ES OTRA DEPREDADORA (Compañera)
+                    if (otherAmeba.brain.data.species == GeneType.Predator)
+                    {
+                        // Opción 1: Ignorarla (fuerza 0).
+                        // Opción 2 (Recomendada): Leve repulsión para que no se solapen ("Espacio personal")
+                        force -= dir * 1.0f * weight; 
+                    }
+                    // CASO B: ES UNA PRESA (Pacífica)
+                    else
+                    {
+                        force += dir * 5.0f * weight; // ¡A CAZAR!
+                        preyFound = true;
+                    }
+                }
             }
             else if (hit.CompareTag("Comida") && !preyFound) 
             {
-                // Solo sienten atracción débil si no hay presas, 
-                // PERO el controller les impedirá comerla (OnTriggerEnter).
-                // Esto sirve para que merodeen cerca de zonas ricas en comida (donde habrá presas).
+                // Merodea comida solo si no hay presas a la vista
                 force += dir * 0.5f * weight; 
             }
-            else if (hit.CompareTag("Muro")) force -= dir * 5.0f * weight;
+            else if (hit.CompareTag("Muro")) 
+            {
+                force -= dir * 5.0f * weight;
+            }
         }
         return force.normalized;
     }
 
     public override void HandleProximity(AmebaController2 other, float dist)
     {
+        // SEGURIDAD: NO ATACAR A OTRAS DEPREDADORAS
+        if (other.brain.data.species == GeneType.Predator) return;
+
+        // Si es pacífica y está a tiro, ataca
         if (dist < controller.GetAttackRange())
         {
             controller.TryPerformAttack(other);
