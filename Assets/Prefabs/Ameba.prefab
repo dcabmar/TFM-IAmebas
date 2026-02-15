@@ -103,6 +103,10 @@ GameObject:
   - component: {fileID: 8366502071237113669}
   - component: {fileID: 9107777883666451620}
   - component: {fileID: 8915645204564950856}
+  - component: {fileID: 6365495677841341266}
+  - component: {fileID: -8887979001712839405}
+  - component: {fileID: -4085424501749681764}
+  - component: {fileID: -6228729075103717626}
   m_Layer: 7
   m_Name: Ameba
   m_TagString: Ameba
@@ -183,7 +187,7 @@ CircleCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -201,20 +205,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e926d32b3f4a3bb4eb2bccf85bbee407, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AmebaController2
+  stats: {fileID: 0}
+  visuals: {fileID: 0}
+  movement: {fileID: 0}
+  actions: {fileID: 0}
   brain: {fileID: 8915645204564950856}
-  visualTransform: {fileID: 1830076454744988228}
   currentState: 0
-  energy: 100
-  maxEnergy: 100
-  reproductionThreshold: 200
-  baseInterval: 2
-  baseVision: 5
-  baseForce: 5
-  moveForce: 4
-  moveInterval: 3
-  sensorRadius: 2
-  attackDamage: 0
-  canAttack: 0
 --- !u!114 &8915645204564950856
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238,3 +234,64 @@ MonoBehaviour:
     species: 0
     countPacifist: 0
     countPredator: 0
+--- !u!114 &6365495677841341266
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4505615230097125330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71f910f761ed0694fbffbb2eb1dbc629, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AmebaActions
+--- !u!114 &-8887979001712839405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4505615230097125330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c192d5a1747d7ed4ba6e17f7be382d59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AmebaMovement
+--- !u!114 &-4085424501749681764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4505615230097125330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0e38552e5f221f449034f0970b6fb36, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AmebaStats
+  brain: {fileID: 8915645204564950856}
+  energy: 100
+  maxEnergy: 100
+  reproductionThreshold: 200
+  baseInterval: 2
+  baseVision: 2
+  baseForce: 2
+  moveForce: 0
+  moveInterval: 0
+  sensorRadius: 0
+  attackDamage: 0
+  canAttack: 0
+--- !u!114 &-6228729075103717626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4505615230097125330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c587cb1da5e355348b4c525c3fb99ca3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AmebaVisuals
+  visualTransform: {fileID: 0}

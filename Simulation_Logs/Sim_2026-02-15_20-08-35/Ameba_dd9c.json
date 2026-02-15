@@ -1,0 +1,23 @@
+{
+  "name": "Ameba_dd9c",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 26.3679371,
+  "distanceTraveled": 42.9713669,
+  "energyConsumed": 180.0,
+  "genome": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    1
+  ],
+  "species": 0,
+  "countPacifist": 4,
+  "countPredator": 3,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}
