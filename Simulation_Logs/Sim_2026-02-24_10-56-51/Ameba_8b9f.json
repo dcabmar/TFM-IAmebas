@@ -1,22 +1,22 @@
 {
-  "name": "Ameba_b70b",
+  "name": "Ameba_8b9f",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 2.89936137,
-  "distanceTraveled": 10.7648029,
+  "timeAlive": 4.56516743,
+  "distanceTraveled": 14.0391283,
   "energyConsumed": 0.0,
   "genome": [
     0,
-    0,
     1,
     0,
     1,
+    1,
     0,
-    0
+    1
   ],
-  "species": 0,
-  "countPacifist": 5,
-  "countPredator": 2,
+  "species": 1,
+  "countPacifist": 3,
+  "countPredator": 4,
   "memoryBank": {
     "Ameba": 0.0
   }

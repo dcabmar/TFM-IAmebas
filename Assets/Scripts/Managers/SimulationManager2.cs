@@ -13,7 +13,7 @@ public class SimulationManager2 : MonoBehaviour
     [Header("Settings")]
     public int maxFood = 100;
     public int maxAmebas = 20;
-    public Vector2 spawnArea = new Vector2(20, 10);
+    public Vector2 spawnArea = new Vector2(45, 35);
 
     [Header("UI Stats")]
     public TMP_Text amebaCountText;

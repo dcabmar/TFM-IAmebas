@@ -1,22 +1,22 @@
 {
-  "name": "Ameba_f36a",
+  "name": "Ameba_e2ef",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 5.675344,
-  "distanceTraveled": 19.9590111,
+  "timeAlive": 7.402317,
+  "distanceTraveled": 25.8407135,
   "energyConsumed": 40.0,
   "genome": [
     0,
     1,
+    0,
     1,
     0,
     0,
-    0,
-    0
+    1
   ],
   "species": 0,
-  "countPacifist": 5,
-  "countPredator": 2,
+  "countPacifist": 4,
+  "countPredator": 3,
   "memoryBank": {
     "Ameba": 0.0
   }

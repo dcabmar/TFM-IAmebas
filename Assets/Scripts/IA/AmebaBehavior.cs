@@ -22,24 +22,42 @@ public class PacifistBehavior : AmebaBehavior
         foreach (var hit in hits)
         {
             if (hit.gameObject == controller.gameObject) continue;
-            Vector2 dir = (hit.transform.position - controller.transform.position).normalized;
+
+            // Calculamos la distancia básica para el peso
             float dist = Vector2.Distance(controller.transform.position, hit.transform.position);
             float weight = 1f / (dist + 0.1f);
 
-            if (hit.CompareTag("Comida")) force += dir * 2.0f * weight; 
-            else if (hit.CompareTag("Ameba"))
-            { 
-                AmebaController2 otherAmeba = hit.GetComponent<AmebaController2>();
-                // CORRECCIÓN: Accedemos a brain a través de stats
-                if (otherAmeba != null && otherAmeba.stats != null && otherAmeba.stats.brain != null)
+            // LOGICA DIFERENCIADA POR TIPO
+            if (hit.CompareTag("Muro"))
+            {
+                // CORRECCIÓN CLAVE: Usamos el punto más cercano del borde, no el centro
+                Vector2 closestPoint = hit.ClosestPoint(controller.transform.position);
+                Vector2 wallDir = (closestPoint - (Vector2)controller.transform.position).normalized;
+                
+                // Huimos perpendicularmente a la superficie del muro
+                force -= wallDir * 15f * weight; 
+            }
+            else 
+            {
+                // Para objetos redondos (Amebas/Comida) el centro está bien
+                Vector2 dir = (hit.transform.position - controller.transform.position).normalized;
+
+                if (hit.CompareTag("Comida")) 
                 {
-                    if (otherAmeba.stats.brain.data.species == GeneType.Predator)
+                    force += dir * 2.0f * weight; 
+                }
+                else if (hit.CompareTag("Ameba"))
+                { 
+                    AmebaController2 otherAmeba = hit.GetComponent<AmebaController2>();
+                    if (otherAmeba != null && otherAmeba.stats != null && otherAmeba.stats.brain != null)
                     {
-                         force -= dir * 7f * weight;
+                        if (otherAmeba.stats.brain.data.species == GeneType.Predator)
+                        {
+                             force -= dir * 7f * weight;
+                        }
                     }
                 }
             }
-            else if(hit.CompareTag("Muro")) force -= dir * 10f * weight;
         }
         return force.normalized;
     }
@@ -60,43 +78,50 @@ public class PredatorBehavior : AmebaBehavior
         foreach (var hit in hits)
         {
             if (hit.gameObject == controller.gameObject) continue;
-            Vector2 dir = (hit.transform.position - controller.transform.position).normalized;
+
             float dist = Vector2.Distance(controller.transform.position, hit.transform.position);
             float weight = 1f / (dist + 0.1f);
 
-            if (hit.CompareTag("Ameba")) 
+            if (hit.CompareTag("Muro"))
             {
-                AmebaController2 otherAmeba = hit.GetComponent<AmebaController2>();
-                
-                // CORRECCIÓN: Accedemos a través de stats.brain
-                if (otherAmeba != null && otherAmeba.stats != null && otherAmeba.stats.brain != null)
+                // CORRECCIÓN CLAVE TAMBIÉN AQUÍ
+                Vector2 closestPoint = hit.ClosestPoint(controller.transform.position);
+                Vector2 wallDir = (closestPoint - (Vector2)controller.transform.position).normalized;
+                force -= wallDir * 15f * weight;
+            }
+            else
+            {
+                Vector2 dir = (hit.transform.position - controller.transform.position).normalized;
+
+                if (hit.CompareTag("Ameba")) 
                 {
-                    if (otherAmeba.stats.brain.data.species == GeneType.Predator)
+                    AmebaController2 otherAmeba = hit.GetComponent<AmebaController2>();
+                    if (otherAmeba != null && otherAmeba.stats != null && otherAmeba.stats.brain != null)
                     {
-                        force -= dir * 1.0f * weight; 
-                    }
-                    else
-                    {
-                        force += dir * 5.0f * weight; 
-                        preyFound = true;
+                        if (otherAmeba.stats.brain.data.species == GeneType.Predator)
+                        {
+                            force -= dir * 1.0f * weight; 
+                        }
+                        else
+                        {
+                            force += dir * 5.0f * weight; 
+                            preyFound = true;
+                        }
                     }
                 }
+                else if (hit.CompareTag("Comida") && !preyFound) 
+                {
+                    force += dir * 0.5f * weight; 
+                }
             }
-            else if (hit.CompareTag("Comida") && !preyFound) 
-            {
-                force += dir * 0.5f * weight; 
-            }
-            else if(hit.CompareTag("Muro")) force -= dir * 10f * weight;
         }
         return force.normalized;
     }
 
     public override void HandleProximity(AmebaController2 other, float dist)
     {
-        // CORRECCIÓN: Accedemos a través de stats.brain
         if (other.stats.brain.data.species == GeneType.Predator) return;
 
-        // CORRECCIÓN: Accedemos a GetAttackRange y TryPerformAttack a través de 'actions'
         if (dist < controller.actions.GetAttackRange())
         {
             controller.actions.TryPerformAttack(other);

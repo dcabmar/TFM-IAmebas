@@ -1,18 +1,18 @@
 {
-  "name": "Ameba_0cc4",
+  "name": "Ameba_f0f9",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 27.09428,
-  "distanceTraveled": 94.13959,
-  "energyConsumed": 150.0,
+  "timeAlive": 19.1374741,
+  "distanceTraveled": 65.30328,
+  "energyConsumed": 0.0,
   "genome": [
     1,
-    1,
-    1,
-    1,
     0,
     0,
-    0
+    0,
+    1,
+    1,
+    1
   ],
   "species": 1,
   "countPacifist": 3,

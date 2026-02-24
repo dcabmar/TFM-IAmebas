@@ -1,18 +1,18 @@
 {
-  "name": "Ameba_fc1b",
+  "name": "Ameba_c650",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 2.813928,
-  "distanceTraveled": 12.4417229,
+  "timeAlive": 4.53894234,
+  "distanceTraveled": 15.34132,
   "energyConsumed": 0.0,
   "genome": [
+    1,
+    0,
+    1,
     0,
     1,
     1,
-    1,
-    1,
-    1,
-    0
+    1
   ],
   "species": 1,
   "countPacifist": 2,

@@ -1,23 +1,24 @@
 {
-  "name": "Ameba_8195",
+  "name": "Ameba_29d6",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 26.6002922,
-  "distanceTraveled": 80.93458,
-  "energyConsumed": 80.0,
+  "timeAlive": 7.170095,
+  "distanceTraveled": 27.6091,
+  "energyConsumed": 10.0,
   "genome": [
+    1,
     0,
     1,
     1,
     0,
     0,
-    1,
     0
   ],
   "species": 0,
   "countPacifist": 4,
   "countPredator": 3,
   "memoryBank": {
-    "Ameba": 0.0
+    "Ameba": 0.0,
+    "Muro": -1.0
   }
 }

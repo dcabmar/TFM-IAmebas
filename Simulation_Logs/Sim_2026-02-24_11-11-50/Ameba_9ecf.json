@@ -1,18 +1,18 @@
 {
-  "name": "Ameba_fe10",
+  "name": "Ameba_9ecf",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 27.09428,
-  "distanceTraveled": 92.11769,
-  "energyConsumed": 0.0,
+  "timeAlive": 7.626903,
+  "distanceTraveled": 30.5621033,
+  "energyConsumed": 55.0,
   "genome": [
     0,
-    1,
-    1,
-    0,
     0,
     1,
-    1
+    1,
+    1,
+    1,
+    0
   ],
   "species": 1,
   "countPacifist": 3,

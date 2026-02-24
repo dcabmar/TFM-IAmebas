@@ -1,22 +1,22 @@
 {
-  "name": "Ameba_582f",
+  "name": "Ameba_4380",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 2.68741632,
-  "distanceTraveled": 11.8139915,
+  "timeAlive": 7.626903,
+  "distanceTraveled": 31.3841267,
   "energyConsumed": 0.0,
   "genome": [
     1,
-    1,
-    1,
+    0,
     1,
     0,
     1,
-    1
+    1,
+    0
   ],
   "species": 1,
-  "countPacifist": 1,
-  "countPredator": 6,
+  "countPacifist": 3,
+  "countPredator": 4,
   "memoryBank": {
     "Ameba": 0.0
   }

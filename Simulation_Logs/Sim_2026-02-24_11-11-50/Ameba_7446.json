@@ -1,0 +1,23 @@
+{
+  "name": "Ameba_7446",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 7.116068,
+  "distanceTraveled": 33.1930351,
+  "energyConsumed": 0.0,
+  "genome": [
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "species": 1,
+  "countPacifist": 1,
+  "countPredator": 6,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

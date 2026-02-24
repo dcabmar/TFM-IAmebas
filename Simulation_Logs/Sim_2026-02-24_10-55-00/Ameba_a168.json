@@ -1,18 +1,18 @@
 {
-  "name": "Ameba_3fec",
+  "name": "Ameba_a168",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 2.84164333,
-  "distanceTraveled": 11.3145409,
+  "timeAlive": 19.1374741,
+  "distanceTraveled": 65.2086945,
   "energyConsumed": 0.0,
   "genome": [
     1,
-    0,
+    1,
+    1,
     0,
     0,
     1,
-    1,
-    1
+    0
   ],
   "species": 1,
   "countPacifist": 3,

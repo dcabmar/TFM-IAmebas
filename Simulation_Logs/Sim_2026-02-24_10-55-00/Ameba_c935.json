@@ -1,18 +1,18 @@
 {
-  "name": "Ameba_dd9c",
+  "name": "Ameba_c935",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 26.3679371,
-  "distanceTraveled": 42.9713669,
-  "energyConsumed": 180.0,
+  "timeAlive": 19.14586,
+  "distanceTraveled": 49.7196121,
+  "energyConsumed": 40.0,
   "genome": [
     0,
     0,
     1,
-    0,
-    0,
     1,
-    1
+    1,
+    0,
+    0
   ],
   "species": 0,
   "countPacifist": 4,

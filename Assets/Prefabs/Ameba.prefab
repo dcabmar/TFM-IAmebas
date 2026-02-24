@@ -275,7 +275,7 @@ MonoBehaviour:
   maxEnergy: 100
   reproductionThreshold: 200
   baseInterval: 2
-  baseVision: 2
+  baseVision: 3
   baseForce: 2
   moveForce: 0
   moveInterval: 0

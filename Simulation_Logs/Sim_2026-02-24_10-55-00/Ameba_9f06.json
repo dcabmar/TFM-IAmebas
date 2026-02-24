@@ -1,22 +1,22 @@
 {
-  "name": "Ameba_d4a5",
+  "name": "Ameba_9f06",
   "generation": 0,
   "isCyst": false,
-  "timeAlive": 27.066227,
-  "distanceTraveled": 89.07376,
+  "timeAlive": 19.1374741,
+  "distanceTraveled": 65.20597,
   "energyConsumed": 0.0,
   "genome": [
     0,
     1,
     0,
     1,
-    1,
+    0,
     1,
     1
   ],
   "species": 1,
-  "countPacifist": 2,
-  "countPredator": 5,
+  "countPacifist": 3,
+  "countPredator": 4,
   "memoryBank": {
     "Ameba": 0.0
   }
