@@ -45,6 +45,7 @@ public class AmebaController2 : MonoBehaviour, IResetable
         // 2. Asignar Comportamiento (Strategy Pattern)
         GeneType species = stats.brain.data.species;
         if (species == GeneType.Predator) currentBehavior = new PredatorBehavior(this);
+        else if (species == GeneType.Neutral) currentBehavior = new NeutralBehavior(this); // <-- NUEVA LÍNEA
         else currentBehavior = new PacifistBehavior(this);
 
         // 3. Resetear subsistemas
@@ -73,8 +74,11 @@ public class AmebaController2 : MonoBehaviour, IResetable
 
                 if (currentBehavior != null)
                 {
-                    // A. Decidir dirección
-                    Vector2 intention = currentBehavior.CalculateDesires(stats.sensorRadius);
+                    // 1. Calculamos la visión "en el aire" (Ej: Base 5 * Escala 2 = 10)
+                    float currentVisionRadius = stats.sensorRadius * transform.localScale.x;
+
+                    // 2. Le pasamos ese "10" al cerebro para que busque cosas
+                    Vector2 intention = currentBehavior.CalculateDesires(currentVisionRadius);
                     
                     // B. Moverse
                     movement.HandleMovement(intention, stats.moveInterval, stats.moveForce);
@@ -140,11 +144,13 @@ public class AmebaController2 : MonoBehaviour, IResetable
         if(stats) 
         {
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position, stats.sensorRadius);
+            // Dibuja el radio real de visión
+            Gizmos.DrawWireSphere(transform.position, stats.sensorRadius * transform.localScale.x);
         }
         if(actions)
         {
             Gizmos.color = Color.red;
+            // El de ataque lo actualizamos ahora
             Gizmos.DrawWireSphere(transform.position, actions.GetAttackRange());
         }
     }

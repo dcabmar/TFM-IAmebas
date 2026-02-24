@@ -1,1 +1,1 @@
-public enum GeneType {Pacifist, Predator}
+public enum GeneType { Pacifist, Predator, Neutral }

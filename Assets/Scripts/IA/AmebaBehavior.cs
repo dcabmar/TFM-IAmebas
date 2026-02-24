@@ -128,3 +128,50 @@ public class PredatorBehavior : AmebaBehavior
         }
     }
 }
+
+public class NeutralBehavior : AmebaBehavior
+{
+    public NeutralBehavior(AmebaController2 c) : base(c) { }
+
+    public override Vector2 CalculateDesires(float radius)
+    {
+        Vector2 force = Vector2.zero;
+        Collider2D[] hits = Physics2D.OverlapCircleAll(controller.transform.position, radius);
+
+        foreach (var hit in hits)
+        {
+            if (hit.gameObject == controller.gameObject) continue;
+
+            float dist = Vector2.Distance(controller.transform.position, hit.transform.position);
+            float weight = 1f / (dist + 0.1f);
+
+            if (hit.CompareTag("Muro"))
+            {
+                Vector2 closestPoint = hit.ClosestPoint(controller.transform.position);
+                Vector2 wallDir = (closestPoint - (Vector2)controller.transform.position).normalized;
+                force -= wallDir * 15f * weight;
+            }
+            else if (hit.CompareTag("Comida"))
+            {
+                // Muy atraídas por la comida
+                Vector2 dir = (hit.transform.position - controller.transform.position).normalized;
+                force += dir * 2.5f * weight; 
+            }
+            // NOTA: Ignoran por completo a las demás Amebas (ni huyen ni atacan activamente)
+        }
+        return force.normalized;
+    }
+
+    public override void HandleProximity(AmebaController2 other, float dist)
+    {
+        // DEFENSA PROPIA: Si la otra ameba es un Depredador y YO tengo genes de ataque (canAttack)...
+        if (other.stats.brain.data.species == GeneType.Predator && controller.stats.canAttack)
+        {
+            // Si el depredador se acerca mucho, ¡le muerdo de vuelta!
+            if (dist < controller.actions.GetAttackRange())
+            {
+                controller.actions.TryPerformAttack(other);
+            }
+        }
+    }
+}

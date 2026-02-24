@@ -1,0 +1,26 @@
+{
+  "name": "Ameba_fb80",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 5.558679,
+  "distanceTraveled": 30.55962,
+  "energyConsumed": 0.0,
+  "genome": [
+    0,
+    1,
+    1,
+    2,
+    2,
+    1,
+    0,
+    2,
+    1
+  ],
+  "species": 1,
+  "countPacifist": 2,
+  "countPredator": 4,
+  "countNeutral": 3,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

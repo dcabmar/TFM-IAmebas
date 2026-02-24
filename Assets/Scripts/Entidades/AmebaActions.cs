@@ -48,7 +48,7 @@ public class AmebaActions : MonoBehaviour
         if (!stats.canAttack) return;
         if (Time.time < lastAttackTime + attackCooldown) return;
 
-        if (target.transform.localScale.x <= transform.localScale.x * 0.6f)
+        if (target.transform.localScale.x <= transform.localScale.x * 0.6f && stats.brain.data.species == GeneType.Predator)
         {
             StartCoroutine(PhagocytosisAmeba(target));
         }
@@ -68,7 +68,7 @@ public class AmebaActions : MonoBehaviour
 
         if (stats.energy <= 0)
         {
-            if (attacker != null) attacker.actions.ReceiveKillReward(stats.maxEnergy);
+            if (attacker != null && attacker.stats.brain.data.species == GeneType.Predator) attacker.actions.ReceiveKillReward(stats.maxEnergy);
             controller.Die();
         }
     }
@@ -79,6 +79,7 @@ public class AmebaActions : MonoBehaviour
         stats.maxEnergy += bonus;
         stats.energy = stats.maxEnergy;
         stats.AddEnergyConsumed(bonus);
+        
         
         visuals.UpdateSize(stats.maxEnergy);
         StartCoroutine(visuals.FlashColor(Color.yellow, stats.brain.data.species));
@@ -136,13 +137,26 @@ public class AmebaActions : MonoBehaviour
             yield return null;
         }
 
-        stats.energy += nutrient.energyValue;
-        stats.AddEnergyConsumed(nutrient.energyValue);
+        // ---> MODIFICACIÓN: La energía extra SOLO se aplica si la especie es Neutra <---
+        float efficiencyMultiplier = 1f; // Por defecto (Pacíficas y Depredadoras) ganan lo normal
+        
+        if (stats.brain.data.species == GeneType.Neutral)
+        {
+            // Las Neutras son súper eficientes procesando nutrientes (50% extra)
+            efficiencyMultiplier = 2f; 
+        }
+        
+        float finalEnergyValue = nutrient.energyValue * efficiencyMultiplier;
+
+        stats.energy += finalEnergyValue;
+        stats.AddEnergyConsumed(finalEnergyValue);
         
         if (stats.energy > stats.maxEnergy) stats.energy = stats.maxEnergy;
+        
+        // Crecimiento de tamaño
         if (stats.maxEnergy < stats.reproductionThreshold * 1.5f) 
         { 
-            stats.maxEnergy += nutrient.energyValue; 
+            stats.maxEnergy += finalEnergyValue; 
             visuals.UpdateSize(stats.maxEnergy); 
         }
 

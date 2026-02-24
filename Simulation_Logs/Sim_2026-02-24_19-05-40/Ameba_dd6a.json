@@ -1,0 +1,26 @@
+{
+  "name": "Ameba_dd6a",
+  "generation": 1,
+  "isCyst": false,
+  "timeAlive": 8.589244,
+  "distanceTraveled": 29.4906654,
+  "energyConsumed": 140.0,
+  "genome": [
+    2,
+    1,
+    2,
+    0,
+    1,
+    0,
+    2,
+    0,
+    2
+  ],
+  "species": 2,
+  "countPacifist": 3,
+  "countPredator": 2,
+  "countNeutral": 4,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

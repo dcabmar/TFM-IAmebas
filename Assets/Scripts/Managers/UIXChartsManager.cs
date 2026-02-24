@@ -35,21 +35,28 @@ public class UIXChartsManager : MonoBehaviour
     {
         if (barChart == null) return;
 
-        // Borramos los datos de ejemplo que trae XCharts por defecto
+        // 1. Limpiamos TODO el gráfico
         barChart.ClearData();
+        barChart.RemoveData();
 
-        // Creamos una nueva serie (grupo de barras)
-        barChart.AddSerie<Bar>("Población");
+        // 2. Cambiamos la paleta de colores del Tema por código
+        // Índice 0 = Blanco (Comida), 1 = Verde (Pacíficas), 2 = Rojo (Depredadoras)
+        // barChart.theme.sharedTheme.colorPalette[0] = Color.white;
+        barChart.theme.sharedTheme.colorPalette[0] = Color.green;
+        barChart.theme.sharedTheme.colorPalette[1] = Color.red;
 
-        // Añadimos las categorías al Eje X (Abajo)
-        barChart.AddXAxisData("Comida");
-        barChart.AddXAxisData("Verdes");
-        barChart.AddXAxisData("Rojas");
+        // 3. Añadimos la serie y le activamos el "ColorByData" automáticamente
+        var serie = barChart.AddSerie<Bar>("Población");
+        serie.colorBy = SerieColorBy.Data;
+        // 4. Configuramos el Eje X (Nombres de las barras)
+        // barChart.AddXAxisData("Comida");
+        barChart.AddXAxisData("Pacíficas");
+        barChart.AddXAxisData("Depredadoras");
 
-        // Añadimos los datos iniciales (empezamos en 0)
-        barChart.AddData(0, 0); // Índice 0 = Comida
-        barChart.AddData(0, 0); // Índice 1 = Verdes
-        barChart.AddData(0, 0); // Índice 2 = Rojas
+        // 5. Añadimos los datos iniciales a 0
+        // barChart.AddData(0, 0); // Comida
+        barChart.AddData(0, 0); // Pacíficas
+        barChart.AddData(0, 0); // Depredadoras
     }
 
     void Update()
@@ -65,9 +72,9 @@ public class UIXChartsManager : MonoBehaviour
         if (barChart == null) return;
 
         // UpdateData(índiceSerie, índiceCategoría, valor)
-        barChart.UpdateData(0, 0, food);
-        barChart.UpdateData(0, 1, pacifists);
-        barChart.UpdateData(0, 2, predators);
+        // barChart.UpdateData(0, 0, food);
+        barChart.UpdateData(0, 0, pacifists);
+        barChart.UpdateData(0, 1, predators);
     }
 
     public void ToggleGraph()
