@@ -127,12 +127,38 @@ public class SimulationManager2 : MonoBehaviour
 
     void MaintainBalance()
     {
+        // 1. Contar Comida
         int currentFood = GameObject.FindGameObjectsWithTag("Comida").Length;
-        int currentAmebas = GameObject.FindGameObjectsWithTag("Ameba").Length;
+        
+        // 2. Contar Amebas y Especies
+        GameObject[] amebas = GameObject.FindGameObjectsWithTag("Ameba");
+        int totalAmebas = amebas.Length;
+        int pacifists = 0;
+        int predators = 0;
 
-        if (amebaCountText != null) amebaCountText.text = "Amebas: " + currentAmebas;
+        foreach (var obj in amebas)
+        {
+            AmebaStats stats = obj.GetComponent<AmebaStats>();
+            if (stats != null && stats.brain != null)
+            {
+                if (stats.brain.data.species == GeneType.Pacifist) pacifists++;
+                else if (stats.brain.data.species == GeneType.Predator) predators++;
+            }
+        }
+
+        // 3. Actualizar Textos UI Clásicos
+        if (amebaCountText != null) amebaCountText.text = "Amebas: " + totalAmebas;
         if (foodCountText != null) foodCountText.text = "Comida: " + currentFood;
 
+        // ----------------------------------------------------
+        // 4. ACTUALIZAR NUESTRO GRÁFICO DE XCHARTS (¡AÑADE ESTO!)
+        if (UIXChartsManager.Instance != null)
+        {
+            UIXChartsManager.Instance.UpdateChartValues(currentFood, pacifists, predators);
+        }
+        // ----------------------------------------------------
+
+        // 5. Respawn de comida si falta
         if (currentFood < maxFood)
         {
             SpawnBatch("Comida", maxFood - currentFood);
