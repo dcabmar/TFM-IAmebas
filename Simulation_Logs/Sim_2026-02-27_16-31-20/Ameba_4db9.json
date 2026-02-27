@@ -1,0 +1,28 @@
+{
+  "name": "Ameba_4db9",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 49.521553,
+  "distanceTraveled": 341.69455,
+  "energyConsumed": 290.0,
+  "genome": [
+    1,
+    2,
+    0,
+    1,
+    2,
+    0,
+    2,
+    1,
+    0,
+    0,
+    1
+  ],
+  "species": 0,
+  "countPacifist": 4,
+  "countPredator": 4,
+  "countNeutral": 3,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

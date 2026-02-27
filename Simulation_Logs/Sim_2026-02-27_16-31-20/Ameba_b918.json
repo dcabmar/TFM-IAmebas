@@ -1,0 +1,28 @@
+{
+  "name": "Ameba_b918",
+  "generation": 1,
+  "isCyst": false,
+  "timeAlive": 37.64684,
+  "distanceTraveled": 431.756653,
+  "energyConsumed": 280.0,
+  "genome": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    2,
+    0,
+    1,
+    1,
+    1,
+    1
+  ],
+  "species": 0,
+  "countPacifist": 5,
+  "countPredator": 5,
+  "countNeutral": 1,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

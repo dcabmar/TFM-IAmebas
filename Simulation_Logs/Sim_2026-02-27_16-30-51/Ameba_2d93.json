@@ -1,0 +1,28 @@
+{
+  "name": "Ameba_2d93",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 4.29546738,
+  "distanceTraveled": 34.1357841,
+  "energyConsumed": 0.0,
+  "genome": [
+    2,
+    0,
+    0,
+    1,
+    2,
+    2,
+    1,
+    1,
+    1,
+    2,
+    1
+  ],
+  "species": 1,
+  "countPacifist": 2,
+  "countPredator": 5,
+  "countNeutral": 4,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

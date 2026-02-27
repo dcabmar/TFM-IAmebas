@@ -23,7 +23,6 @@ public class AmebaActions : MonoBehaviour
 
     public float GetAttackRange() { return transform.localScale.x * 1.25f; }
 
-    // --- COMBATE ---
     public void CheckSurroundings(AmebaBehavior behavior)
     {
         float range = GetAttackRange();
@@ -32,12 +31,18 @@ public class AmebaActions : MonoBehaviour
         foreach (var hit in close)
         {
             if (hit.gameObject == gameObject) continue;
-            if (hit.CompareTag("Ameba"))
+            
+            // AHORA DETECTAMOS TANTO AMEBAS VIVAS COMO CADÁVERES
+            if (hit.CompareTag("Ameba") || hit.CompareTag("Cadaver"))
             {
                 AmebaController2 other = hit.GetComponent<AmebaController2>();
                 if (other != null)
                 {
-                    behavior.HandleProximity(other, Vector2.Distance(transform.position, other.transform.position));
+                    // ---> CORRECCIÓN CLAVE: Distancia al BORDE de la presa, no al centro <---
+                    Vector2 closestPoint = hit.ClosestPoint(transform.position);
+                    float distanceToEdge = Vector2.Distance(transform.position, closestPoint);
+
+                    behavior.HandleProximity(other, distanceToEdge);
                 }
             }
         }
@@ -45,49 +50,70 @@ public class AmebaActions : MonoBehaviour
 
     public void TryPerformAttack(AmebaController2 target)
     {
+        attackCooldown = 1.0f + (0.5f * controller.brain.data.countNeutral);
         if (!stats.canAttack) return;
         if (Time.time < lastAttackTime + attackCooldown) return;
 
-        if (target.transform.localScale.x <= transform.localScale.x * 0.6f && stats.brain.data.species == GeneType.Predator)
+        // Si es una presa viva mucho más pequeña, instakill (Fagocitosis)
+        if (target.currentState != AmebaState.Dead && target.transform.localScale.x <= transform.localScale.x * 0.6f && stats.brain.data.species == GeneType.Predator)
         {
             StartCoroutine(PhagocytosisAmeba(target));
         }
-        else
+        else // Si es un cadáver O una ameba grande, le damos un bocado (daño)
         {
             Vector2 knockDir = (target.transform.position - transform.position).normalized;
-            target.actions.TakeDamage(stats.attackDamage, knockDir, controller);
+            float scaledDamage = stats.attackDamage * transform.localScale.x;
+            target.actions.TakeDamage(scaledDamage, knockDir, controller);
         }
         lastAttackTime = Time.time;
     }
 
     public void TakeDamage(float amount, Vector2 dir, AmebaController2 attacker)
     {
+        // CASO A: SI YA ESTOY MUERTO (CADÁVER)
+        if (controller.currentState == AmebaState.Dead)
+        {
+            // El daño se convierte en energía máxima que me roban
+            float bittenAmount = Mathf.Min(amount, stats.maxEnergy);
+            stats.maxEnergy -= bittenAmount;
+            visuals.UpdateSize(stats.maxEnergy); // Me encojo al ser devorado
+
+            if (attacker != null && attacker.stats.brain.data.species == GeneType.Predator)
+            {
+                attacker.stats.energy += bittenAmount;
+                attacker.stats.AddEnergyConsumed(bittenAmount);
+                
+                // Si el depredador está lleno, que el exceso de carne le haga crecer en tamaño máximo
+                if (attacker.stats.energy > attacker.stats.maxEnergy) {
+                    attacker.stats.maxEnergy += bittenAmount * 0.5f;
+                    attacker.visuals.UpdateSize(attacker.stats.maxEnergy);
+                }
+
+                // ---> NUEVO: COMPROBACIÓN DE MITOSIS AL COMER CARROÑA <---
+                if (attacker.stats.maxEnergy >= attacker.stats.reproductionThreshold)
+                {
+                    attacker.Mitosis();
+                }
+            }
+
+            // Si se me han comido toda la masa, desaparezco por completo
+            if (stats.maxEnergy <= 0.1f) controller.CompletelyDestroy();
+            return;
+        }
+
+        // CASO B: SI ESTOY VIVO (COMBATE NORMAL)
         stats.energy -= amount;
         rb.AddForce(dir * attacker.transform.localScale.x * 3f, ForceMode2D.Impulse);
+        
+        // Iniciamos el parpadeo de daño
         StartCoroutine(visuals.FlashColor(Color.white, stats.brain.data.species));
 
         if (stats.energy <= 0)
         {
-            if (attacker != null && attacker.stats.brain.data.species == GeneType.Predator) attacker.actions.ReceiveKillReward(stats.maxEnergy);
-            controller.Die();
+            controller.BecomeCorpse();
         }
     }
 
-    public void ReceiveKillReward(float victimMaxEnergy)
-    {
-        float bonus = victimMaxEnergy * 0.5f;
-        stats.maxEnergy += bonus;
-        stats.energy = stats.maxEnergy;
-        stats.AddEnergyConsumed(bonus);
-        
-        
-        visuals.UpdateSize(stats.maxEnergy);
-        StartCoroutine(visuals.FlashColor(Color.yellow, stats.brain.data.species));
-        
-        if (stats.maxEnergy > stats.reproductionThreshold) controller.Mitosis();
-    }
-
-    // --- ALIMENTACIÓN (CORRUTINAS) ---
     IEnumerator PhagocytosisAmeba(AmebaController2 prey)
     {
         controller.SetState(AmebaState.Digesting);
@@ -111,7 +137,7 @@ public class AmebaActions : MonoBehaviour
         stats.AddEnergyConsumed(prey.stats.maxEnergy);
 
         prey.transform.SetParent(null);
-        prey.gameObject.SetActive(false);
+        prey.CompletelyDestroy(); // <--- LÍNEA CORREGIDA
         
         controller.SetState(AmebaState.Trophozoite);
         visuals.UpdateSize(stats.maxEnergy);
@@ -137,14 +163,8 @@ public class AmebaActions : MonoBehaviour
             yield return null;
         }
 
-        // ---> MODIFICACIÓN: La energía extra SOLO se aplica si la especie es Neutra <---
-        float efficiencyMultiplier = 1f; // Por defecto (Pacíficas y Depredadoras) ganan lo normal
-        
-        if (stats.brain.data.species == GeneType.Neutral)
-        {
-            // Las Neutras son súper eficientes procesando nutrientes (50% extra)
-            efficiencyMultiplier = 2f; 
-        }
+        float efficiencyMultiplier = 1f; 
+        if (stats.brain.data.species == GeneType.Neutral) efficiencyMultiplier = 2f; 
         
         float finalEnergyValue = nutrient.energyValue * efficiencyMultiplier;
 
@@ -152,8 +172,6 @@ public class AmebaActions : MonoBehaviour
         stats.AddEnergyConsumed(finalEnergyValue);
         
         if (stats.energy > stats.maxEnergy) stats.energy = stats.maxEnergy;
-        
-        // Crecimiento de tamaño
         if (stats.maxEnergy < stats.reproductionThreshold * 1.5f) 
         { 
             stats.maxEnergy += finalEnergyValue; 
@@ -168,28 +186,21 @@ public class AmebaActions : MonoBehaviour
         if (stats.maxEnergy >= stats.reproductionThreshold) controller.Mitosis();
     }
 
-    // --- TRIGGERS ---
     void OnTriggerEnter2D(Collider2D col)
     {
         if (controller.currentState != AmebaState.Trophozoite) return;
 
         if (col.CompareTag("Comida"))
         {
-            if (stats.brain.data.species == GeneType.Predator) return; // Depredadores ignoran comida
-
+            if (stats.brain.data.species == GeneType.Predator) return;
             Nutrient2 n = col.GetComponent<Nutrient2>();
             if (n != null && !n.isBeingDigested) StartCoroutine(PhagocytosisNutrient(n));
         }
-        else if (col.CompareTag("Muro"))
-        {
-            stats.brain.Learn("Muro", -5f);
-        }
+        else if (col.CompareTag("Muro")) stats.brain.Learn("Muro", -5f);
     }
-        void OnCollisionEnter2D(Collision2D col)
+
+    void OnCollisionEnter2D(Collision2D col)
     {
-        if (col.gameObject.CompareTag("Muro"))
-        {
-            stats.brain.Learn("Muro", -10f);
-        }
+        if (col.gameObject.CompareTag("Muro")) stats.brain.Learn("Muro", -10f);
     }
 }

@@ -1,0 +1,28 @@
+{
+  "name": "Ameba_bcb6",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 2.12888551,
+  "distanceTraveled": 18.14616,
+  "energyConsumed": 0.0,
+  "genome": [
+    1,
+    0,
+    0,
+    1,
+    1,
+    2,
+    0,
+    1,
+    1,
+    1,
+    1
+  ],
+  "species": 1,
+  "countPacifist": 3,
+  "countPredator": 7,
+  "countNeutral": 1,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

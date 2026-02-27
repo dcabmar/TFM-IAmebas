@@ -1,11 +1,10 @@
 using UnityEngine;
 using System.Collections;
 
-public enum AmebaState { Trophozoite, Digesting }
+public enum AmebaState { Trophozoite, Digesting, Dead } // <-- AÑADIDO DEAD
 
 public class AmebaController2 : MonoBehaviour, IResetable
 {
-    // REFERENCIAS PÚBLICAS (Para que los Behaviors y Actions las vean)
     [HideInInspector] public AmebaStats stats;
     [HideInInspector] public AmebaVisuals visuals;
     [HideInInspector] public AmebaMovement movement;
@@ -14,20 +13,17 @@ public class AmebaController2 : MonoBehaviour, IResetable
 
     public AmebaState currentState = AmebaState.Trophozoite;
 
-    // ESTRATEGIA (Behavior)
     private AmebaBehavior currentBehavior;
     private Vector2 lastPosition;
 
     void Awake()
     {
-        // Auto-detectar componentes hermanos
         stats = GetComponent<AmebaStats>();
         visuals = GetComponent<AmebaVisuals>();
         movement = GetComponent<AmebaMovement>();
         actions = GetComponent<AmebaActions>();
         brain = GetComponent<AmebaBrain>();
         
-        // Configurar colisiones
         GetComponent<Rigidbody2D>().sleepMode = RigidbodySleepMode2D.NeverSleep;
         GetComponent<Rigidbody2D>().collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
@@ -37,18 +33,16 @@ public class AmebaController2 : MonoBehaviour, IResetable
         StopAllCoroutines();
         transform.SetParent(null);
         
+        gameObject.tag = "Ameba"; // IMPORTANTE: Volver a ser ameba al respawnear de la pool
         if (GetComponent<Collider2D>()) GetComponent<Collider2D>().enabled = true;
 
-        // 1. Inicializar Stats
         stats.InitStats();
         
-        // 2. Asignar Comportamiento (Strategy Pattern)
         GeneType species = stats.brain.data.species;
         if (species == GeneType.Predator) currentBehavior = new PredatorBehavior(this);
-        else if (species == GeneType.Neutral) currentBehavior = new NeutralBehavior(this); // <-- NUEVA LÍNEA
+        else if (species == GeneType.Neutral) currentBehavior = new NeutralBehavior(this);
         else currentBehavior = new PacifistBehavior(this);
 
-        // 3. Resetear subsistemas
         movement.ResetMovement();
         visuals.ResetVisuals(species);
         visuals.UpdateSize(stats.maxEnergy);
@@ -59,14 +53,18 @@ public class AmebaController2 : MonoBehaviour, IResetable
 
     void Update()
     {
-        // Tracking de métricas
+        if (currentState == AmebaState.Dead) 
+        {
+            movement.ApplyDigestingFriction(); // Para que el cadáver frene si lo empujan
+            return; 
+        }
+
         float step = Vector2.Distance(transform.position, lastPosition);
         if (step > 0) { stats.UpdateMetrics(step); lastPosition = transform.position; }
 
         // Chequeo de muerte natural
-        if (stats.energy <= 0) { Die(); return; }
+        if (stats.energy <= 0) { BecomeCorpse(); return; }
 
-        // Máquina de Estados
         switch (currentState)
         {
             case AmebaState.Trophozoite:
@@ -74,17 +72,14 @@ public class AmebaController2 : MonoBehaviour, IResetable
 
                 if (currentBehavior != null)
                 {
-                    // 1. Calculamos la visión "en el aire" (Ej: Base 5 * Escala 2 = 10)
                     float currentVisionRadius = stats.sensorRadius * transform.localScale.x;
+                    float currentMoveInterval = Mathf.Max(0.2f, stats.moveInterval * transform.localScale.x);
 
-                    // 2. Le pasamos ese "10" al cerebro para que busque cosas
                     Vector2 intention = currentBehavior.CalculateDesires(currentVisionRadius);
                     
-                    // B. Moverse
-                    movement.HandleMovement(intention, stats.moveInterval, stats.moveForce);
+                    movement.HandleMovement(intention, currentMoveInterval, stats.moveForce);
                     if(movement.HasMovedJustNow()) stats.energy -= transform.localScale.x * 0.1f;
 
-                    // C. Interactuar (Combate)
                     actions.CheckSurroundings(currentBehavior);
                 }
                 break;
@@ -95,9 +90,27 @@ public class AmebaController2 : MonoBehaviour, IResetable
         }
     }
 
-    public void SetState(AmebaState newState)
+    public void SetState(AmebaState newState) { currentState = newState; }
+
+    public void BecomeCorpse()
     {
-        currentState = newState;
+        if (currentState == AmebaState.Dead) return;
+        
+        brain.SaveBrain(); 
+        currentState = AmebaState.Dead;
+        gameObject.tag = "Cadaver"; 
+        movement.StopImmediate();
+
+        // ---> SOLUCIÓN COLOR: Detenemos la corrutina de parpadeo de daño y gelatina <---
+        visuals.StopAllCoroutines();
+        actions.StopAllCoroutines();
+
+        visuals.SetCorpseVisuals();
+    }
+
+    public void CompletelyDestroy()
+    {
+        gameObject.SetActive(false); // Desaparece del todo (usado al comer el cadáver o fagocitosis)
     }
 
     public void Mitosis()
@@ -111,46 +124,33 @@ public class AmebaController2 : MonoBehaviour, IResetable
         {
             AmebaController2 child = childObj.GetComponent<AmebaController2>();
             child.brain.LoadBrainData(childMemories);
-            child.ResetState(); // Esto disparará el InitStats del hijo
+            child.ResetState();
 
-            // Ajuste de energía post-parto en el hijo
             child.stats.maxEnergy = stats.maxEnergy / 2f;
             child.stats.energy = child.stats.maxEnergy;
             child.visuals.UpdateSize(child.stats.maxEnergy);
             child.GetComponent<Rigidbody2D>().AddForce(randomDir * 5f, ForceMode2D.Impulse);
         }
 
-        // Ajuste en el padre
         stats.maxEnergy /= 2f;
         stats.energy = stats.maxEnergy;
         visuals.UpdateSize(stats.maxEnergy);
         GetComponent<Rigidbody2D>().AddForce(-randomDir * 5f, ForceMode2D.Impulse);
     }
 
-    public void Die()
-    {
-        brain.SaveBrain();
-        gameObject.SetActive(false);
-    }
-
     void OnDisable()
     {
-        if (brain != null && brain.data.timeAlive > 1.0f) brain.SaveBrain();
+        if (brain != null && brain.data.timeAlive > 1.0f && currentState != AmebaState.Dead) brain.SaveBrain();
     }
     
-    // Auxiliar para dibujar gizmos del controlador o delegar a subsistemas
     void OnDrawGizmosSelected()
     {
-        if(stats) 
-        {
+        if(stats) {
             Gizmos.color = Color.yellow;
-            // Dibuja el radio real de visión
             Gizmos.DrawWireSphere(transform.position, stats.sensorRadius * transform.localScale.x);
         }
-        if(actions)
-        {
+        if(actions) {
             Gizmos.color = Color.red;
-            // El de ataque lo actualizamos ahora
             Gizmos.DrawWireSphere(transform.position, actions.GetAttackRange());
         }
     }

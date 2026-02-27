@@ -49,4 +49,9 @@ public class AmebaVisuals : MonoBehaviour
         yield return new WaitForSeconds(0.1f);
         ResetVisuals(originalSpecies);
     }
+    public void SetCorpseVisuals()
+    {
+        // Se vuelve de un color gris apagado cuando muere
+        spriteRenderer.color = new Color(0.4f, 0.4f, 0.4f, 1f); 
+    }
 }

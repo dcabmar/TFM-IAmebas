@@ -1,0 +1,28 @@
+{
+  "name": "Ameba_834c",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 49.81805,
+  "distanceTraveled": 362.898468,
+  "energyConsumed": 280.0,
+  "genome": [
+    2,
+    1,
+    1,
+    1,
+    1,
+    0,
+    2,
+    2,
+    0,
+    0,
+    0
+  ],
+  "species": 0,
+  "countPacifist": 4,
+  "countPredator": 4,
+  "countNeutral": 3,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

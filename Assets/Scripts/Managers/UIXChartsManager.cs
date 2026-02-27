@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using XCharts.Runtime; // IMPORTANTE: La librería de XCharts
+using XCharts.Runtime; 
 
 public class UIXChartsManager : MonoBehaviour
 {
@@ -11,7 +11,6 @@ public class UIXChartsManager : MonoBehaviour
     public RectTransform panelRect;
     public Button toggleButton;
 
-    // Variables de animación
     private bool isExpanded = false;
     private Vector2 hiddenPos;
     private Vector2 shownPos;
@@ -26,59 +25,53 @@ public class UIXChartsManager : MonoBehaviour
         panelRect.anchoredPosition = hiddenPos; // Empezar oculto
 
         if(toggleButton) toggleButton.onClick.AddListener(ToggleGraph);
+    }
 
+    void Start()
+    {
         // 2. Configurar el Gráfico por código
+        // LO MOVEMOS AL START: Así le damos tiempo a Unity a inicializar las fuentes de texto
+        // y evitamos el error del "Main Thread" y los Jobs de Texto.
         SetupChart();
     }
 
     void SetupChart()
     {
         if (barChart == null) return;
-
-        // 1. Limpiamos TODO el gráfico
         barChart.ClearData();
         barChart.RemoveData();
 
-        // 2. Cambiamos la paleta de colores del Tema por código
-        // Índice 0 = Blanco (Comida), 1 = Verde (Pacíficas), 2 = Rojo (Depredadoras)
-        // barChart.theme.sharedTheme.colorPalette[0] = Color.white;
+        // 0 = Pacíficas, 1 = Depredadoras, 2 = Neutras
         barChart.theme.sharedTheme.colorPalette[0] = Color.green;
         barChart.theme.sharedTheme.colorPalette[1] = Color.red;
+        barChart.theme.sharedTheme.colorPalette[2] = Color.cyan; // NUEVO COLOR
 
-        // 3. Añadimos la serie y le activamos el "ColorByData" automáticamente
         var serie = barChart.AddSerie<Bar>("Población");
         serie.colorBy = SerieColorBy.Data;
-        // 4. Configuramos el Eje X (Nombres de las barras)
-        // barChart.AddXAxisData("Comida");
+        
         barChart.AddXAxisData("Pacíficas");
         barChart.AddXAxisData("Depredadoras");
+        barChart.AddXAxisData("Neutras"); // NUEVA BARRA
 
-        // 5. Añadimos los datos iniciales a 0
-        // barChart.AddData(0, 0); // Comida
-        barChart.AddData(0, 0); // Pacíficas
-        barChart.AddData(0, 0); // Depredadoras
+        barChart.AddData(0, 0); 
+        barChart.AddData(0, 0); 
+        barChart.AddData(0, 0); 
     }
 
     void Update()
     {
-        // Animación suave del panel
         Vector2 target = isExpanded ? shownPos : hiddenPos;
         panelRect.anchoredPosition = Vector2.Lerp(panelRect.anchoredPosition, target, Time.deltaTime * 10f);
     }
 
-    // Esta función la llamaremos desde el SimulationManager
-    public void UpdateChartValues(int food, int pacifists, int predators)
+    // AÑADIDO PARÁMETRO 'neutrals'
+    public void UpdateChartValues(int pacifists, int predators, int neutrals)
     {
         if (barChart == null) return;
-
-        // UpdateData(índiceSerie, índiceCategoría, valor)
-        // barChart.UpdateData(0, 0, food);
         barChart.UpdateData(0, 0, pacifists);
         barChart.UpdateData(0, 1, predators);
+        barChart.UpdateData(0, 2, neutrals);
     }
 
-    public void ToggleGraph()
-    {
-        isExpanded = !isExpanded;
-    }
+    public void ToggleGraph() { isExpanded = !isExpanded; }
 }

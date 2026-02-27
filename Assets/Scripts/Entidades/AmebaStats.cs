@@ -9,7 +9,7 @@ public class AmebaStats : MonoBehaviour
     [Header("Biological Stats")]
     public float energy = 100f;
     public float maxEnergy = 100f;
-    public float reproductionThreshold = 180f;
+    public float reproductionThreshold = 200f;
     public float baseInterval = 2.0f;
     public float baseVision = 2f;
     public float baseForce = 2f;
@@ -29,7 +29,7 @@ public class AmebaStats : MonoBehaviour
     public void InitStats()
     {
         // 1. Reseteamos el umbral base por si acaso
-        reproductionThreshold = 180f;
+        reproductionThreshold = 200f;
 
         if (brain != null)
         {
@@ -43,7 +43,7 @@ public class AmebaStats : MonoBehaviour
                 
                 // --> BONO DE TAMAÑO INICIAL (Solo Gen 0) <--
                 // +20 extra de energía máxima/masa por cada gen neutro
-                maxEnergy = 100f + (brain.data.countNeutral * 20f);
+                maxEnergy = 100f + (brain.data.countNeutral * 25f);
             }
             // CASO B: Es una hija nacida por Mitosis
             else
@@ -62,7 +62,7 @@ public class AmebaStats : MonoBehaviour
     {
         brain.data.genome.Clear();
         // Ahora generamos números del 0 al 3 (excluye el 3) para incluir a la Neutra
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < 11; i++)
             brain.data.genome.Add((GeneType)Random.Range(0, 3)); 
     }
 
@@ -86,11 +86,11 @@ public class AmebaStats : MonoBehaviour
 
         // Stats Depredador
         moveForce = baseForce + (d.countPredator * 1f);
-        attackDamage = 5f + (d.countPredator * 3f);
+        attackDamage = 5f + (d.countPredator * 5f);
         canAttack = (d.countPredator > 0);
 
         // STATS NEUTRA (Aumenta el umbral de mitosis para que se hagan más grandes antes de dividirse)
-        reproductionThreshold += (d.countNeutral * 30f); 
+        reproductionThreshold += (d.countNeutral * 40f); 
 
         // ASIGNAR ESPECIE DOMINANTE
         if (d.countPredator > d.countPacifist && d.countPredator > d.countNeutral) 

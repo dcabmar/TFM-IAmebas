@@ -1,0 +1,28 @@
+{
+  "name": "Ameba_df8c",
+  "generation": 1,
+  "isCyst": false,
+  "timeAlive": 28.5418835,
+  "distanceTraveled": 171.261215,
+  "energyConsumed": 210.0,
+  "genome": [
+    1,
+    2,
+    0,
+    1,
+    2,
+    0,
+    2,
+    1,
+    0,
+    0,
+    1
+  ],
+  "species": 0,
+  "countPacifist": 4,
+  "countPredator": 4,
+  "countNeutral": 3,
+  "memoryBank": {
+    "Ameba": 0.0
+  }
+}

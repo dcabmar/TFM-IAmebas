@@ -1,0 +1,29 @@
+{
+  "name": "Ameba_64eb",
+  "generation": 0,
+  "isCyst": false,
+  "timeAlive": 49.9454956,
+  "distanceTraveled": 527.415649,
+  "energyConsumed": 420.0,
+  "genome": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    2,
+    0,
+    1,
+    1,
+    1,
+    1
+  ],
+  "species": 0,
+  "countPacifist": 5,
+  "countPredator": 5,
+  "countNeutral": 1,
+  "memoryBank": {
+    "Ameba": 0.0,
+    "Muro": -1.0
+  }
+}
